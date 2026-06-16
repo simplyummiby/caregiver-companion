@@ -1,0 +1,715 @@
+<!--
+Caregiver Companion
+Version: 0.1
+Date: June 16, 2026
+Changes: Starter dashboard with sidebar, summary cards, quick actions, timestamped timeline, and localStorage saving.
+Previous Version: Initial concept/mockup only.
+Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caregiver Companion</title>
+
+  <style>
+    :root {
+      --bg: #f8f6ff;
+      --card: #ffffff;
+      --primary: #5b35b1;
+      --primary-dark: #21114d;
+      --accent: #8ed8d0;
+      --soft-purple: #eee7ff;
+      --soft-blue: #e8f7ff;
+      --soft-green: #eaf8ef;
+      --soft-orange: #fff3e6;
+      --text: #1e1633;
+      --muted: #6d6580;
+      --border: #ddd7f0;
+      --danger: #d9534f;
+      --success: #2f9b63;
+      --shadow: 0 10px 25px rgba(42, 25, 87, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, var(--primary-dark), #120a2e);
+      color: white;
+      padding: 24px 18px;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+    }
+
+    .brand {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 28px;
+      line-height: 1.2;
+    }
+
+    .nav button {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: white;
+      text-align: left;
+      padding: 13px 14px;
+      border-radius: 12px;
+      font-size: 0.98rem;
+      cursor: pointer;
+      margin-bottom: 6px;
+    }
+
+    .nav button.active,
+    .nav button:hover {
+      background: rgba(255,255,255,0.16);
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 28px;
+      width: calc(100% - 260px);
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .status-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .section h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: var(--primary);
+      letter-spacing: 0.02em;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(110px, 1fr));
+      gap: 12px;
+    }
+
+    .summary-card {
+      background: #fafaff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+
+    .summary-card .icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 1.6rem;
+      color: var(--primary-dark);
+    }
+
+    .summary-card span {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(100px, 1fr));
+      gap: 12px;
+    }
+
+    .quick-actions button,
+    .primary-btn {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #fff, var(--soft-purple));
+      color: var(--primary);
+      border-radius: 14px;
+      padding: 14px 10px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .quick-actions button:hover,
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 90px 40px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+
+    .timeline-time {
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .timeline-icon {
+      font-size: 1.3rem;
+      text-align: center;
+    }
+
+    .delete-btn {
+      border: none;
+      background: transparent;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 16px;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(16, 10, 35, 0.45);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      padding: 18px;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(620px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      background: white;
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--primary);
+    }
+
+    .close-btn {
+      border: none;
+      background: var(--soft-purple);
+      color: var(--primary);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .floating-add {
+      position: fixed;
+      right: 28px;
+      bottom: 28px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-size: 2.4rem;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(91,53,177,0.4);
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      border: none;
+      background: var(--primary);
+      color: white;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 1.2rem;
+    }
+
+    @media (max-width: 950px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: 0.25s ease;
+        z-index: 20;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .main {
+        margin-left: 0;
+        width: 100%;
+        padding: 18px;
+      }
+
+      .mobile-menu-btn {
+        display: inline-block;
+      }
+
+      .topbar {
+        align-items: flex-start;
+      }
+
+      .summary-grid,
+      .quick-actions {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .timeline-item {
+        grid-template-columns: 74px 32px 1fr auto;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">💜 Caregiver<br>Companion</div>
+
+      <nav class="nav">
+        <button class="active" onclick="openModal('today')">🏠 Today</button>
+        <button onclick="openModal('feeding')">🍼 Feeding & Hydration</button>
+        <button onclick="openModal('diapers')">💩 Diapers</button>
+        <button onclick="openModal('hygiene')">🪥 Hygiene</button>
+        <button onclick="openModal('food')">🍎 Food Log</button>
+        <button onclick="openModal('activity')">🚶 Activity & Positioning</button>
+        <button onclick="openModal('health')">🌡 Health & Meds</button>
+        <button onclick="openModal('appointments')">📅 Appointments</button>
+        <button onclick="openModal('supplies')">📦 Supplies</button>
+        <button onclick="openModal('notes')">📝 Concerns & Notes</button>
+        <button onclick="openModal('contacts')">☎️ Contacts</button>
+        <button onclick="openModal('reports')">📊 Reports</button>
+        <button onclick="openModal('settings')">⚙️ Settings</button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+
+        <div class="title">
+          <h1>Muhammad 💜</h1>
+          <p id="todayDate">Daily Care Dashboard</p>
+        </div>
+
+        <div class="status-card">
+          <strong>😊 Mood</strong>
+          <div id="moodDisplay">Not set</div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h2>Today's Summary</h2>
+        <div class="summary-grid">
+          <div class="summary-card"><span class="icon">🍼</span><strong id="shakeCount">0</strong><span>Shakes</span></div>
+          <div class="summary-card"><span class="icon">💧</span><strong id="waterCount">0 / 3</strong><span>Water Goal</span></div>
+          <div class="summary-card"><span class="icon">💦</span><strong id="peeCount">0</strong><span>Pee</span></div>
+          <div class="summary-card"><span class="icon">💩</span><strong id="poopyCount">0</strong><span>Poopy</span></div>
+          <div class="summary-card"><span class="icon">🪥</span><strong id="teethCount">0 / 2</strong><span>Teeth</span></div>
+          <div class="summary-card"><span class="icon">🚿</span><strong id="bathStatus">No</strong><span>Bath</span></div>
+          <div class="summary-card"><span class="icon">🚶</span><strong id="activityCount">0</strong><span>Activity</span></div>
+          <div class="summary-card"><span class="icon">😊</span><strong id="moodCard">—</strong><span>Mood</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Quick Actions</h2>
+        <div class="quick-actions">
+          <button onclick="quickAdd('shake')">🍼 + Shake</button>
+          <button onclick="quickAdd('water')">💧 + Water</button>
+          <button onclick="quickAdd('pee')">💦 + Pee</button>
+          <button onclick="quickAdd('poopy')">💩 + Poopy</button>
+          <button onclick="openAddModal('food')">🍎 + Food</button>
+          <button onclick="quickAdd('position')">🔄 + Position</button>
+          <button onclick="quickAdd('walk')">🚶 + Walk</button>
+          <button onclick="openAddModal('note')">📝 + Note</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Today's Timeline</h2>
+        <div id="timeline" class="timeline"></div>
+      </section>
+    </main>
+  </div>
+
+  <button class="floating-add" onclick="openModal('quick')">+</button>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Modal</h2>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "caregiverCompanion_v01";
+
+    let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+    const icons = {
+      shake: "🍼",
+      water: "💧",
+      pee: "💦",
+      poopy: "💩",
+      food: "🍎",
+      position: "🔄",
+      walk: "🚶",
+      exercise: "🏋️",
+      teeth_morning: "🪥",
+      teeth_evening: "🪥",
+      full_bath: "🚿",
+      sponge_bath: "🛁",
+      nails: "✂️",
+      haircut: "💇",
+      medication: "💊",
+      temperature: "🌡",
+      note: "📝",
+      mood: "😊",
+      wake: "☀️"
+    };
+
+    const labels = {
+      shake: "Shake",
+      water: "Water",
+      pee: "Pee Diaper",
+      poopy: "Poopy Diaper",
+      food: "Food",
+      position: "Position Change",
+      walk: "Walk",
+      exercise: "Exercise",
+      teeth_morning: "Morning Teeth Brushed",
+      teeth_evening: "Evening Teeth Brushed",
+      full_bath: "Full Bath",
+      sponge_bath: "Sponge Bath",
+      nails: "Nails Clipped",
+      haircut: "Hair Cut",
+      medication: "Medication",
+      temperature: "Temperature",
+      note: "Note",
+      mood: "Mood",
+      wake: "Wake Up"
+    };
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    function todayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function isToday(entry) {
+      return entry.timestamp.slice(0, 10) === todayKey();
+    }
+
+    function timeLabel(timestamp) {
+      return new Date(timestamp).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    }
+
+    function dateLabel() {
+      const today = new Date();
+      document.getElementById("todayDate").textContent =
+        today.toLocaleDateString([], {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        });
+    }
+
+    function quickAdd(type, details = "") {
+      entries.push({
+        id: crypto.randomUUID(),
+        type,
+        details,
+        timestamp: new Date().toISOString()
+      });
+
+      save();
+      render();
+      closeModal();
+    }
+
+    function deleteEntry(id) {
+      entries = entries.filter(entry => entry.id !== id);
+      save();
+      render();
+    }
+
+    function todayEntries() {
+      return entries
+        .filter(isToday)
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }
+
+    function countToday(type) {
+      return todayEntries().filter(entry => entry.type === type).length;
+    }
+
+    function hasToday(type) {
+      return todayEntries().some(entry => entry.type === type);
+    }
+
+    function latestToday(type) {
+      return [...todayEntries()].reverse().find(entry => entry.type === type);
+    }
+
+    function renderSummary() {
+      document.getElementById("shakeCount").textContent = countToday("shake");
+      document.getElementById("waterCount").textContent = `${countToday("water")} / 3`;
+      document.getElementById("peeCount").textContent = countToday("pee");
+      document.getElementById("poopyCount").textContent = countToday("poopy");
+
+      const teethTotal = countToday("teeth_morning") + countToday("teeth_evening");
+      document.getElementById("teethCount").textContent = `${teethTotal} / 2`;
+
+      const bathDone = hasToday("full_bath")
+        ? "Full"
+        : hasToday("sponge_bath")
+          ? "Sponge"
+          : "No";
+
+      document.getElementById("bathStatus").textContent = bathDone;
+
+      const activityTotal =
+        countToday("position") + countToday("walk") + countToday("exercise");
+      document.getElementById("activityCount").textContent = activityTotal;
+
+      const mood = latestToday("mood");
+      document.getElementById("moodDisplay").textContent = mood ? mood.details : "Not set";
+      document.getElementById("moodCard").textContent = mood ? mood.details : "—";
+    }
+
+    function renderTimeline() {
+      const timeline = document.getElementById("timeline");
+      const items = todayEntries();
+
+      if (!items.length) {
+        timeline.innerHTML = `<div class="empty">No entries yet today. Use Quick Actions to start logging.</div>`;
+        return;
+      }
+
+      timeline.innerHTML = items.map(entry => `
+        <div class="timeline-item">
+          <div class="timeline-time">${timeLabel(entry.timestamp)}</div>
+          <div class="timeline-icon">${icons[entry.type] || "•"}</div>
+          <div>
+            <strong>${labels[entry.type] || entry.type}</strong>
+            ${entry.details ? `<br><span style="color: var(--muted);">${entry.details}</span>` : ""}
+          </div>
+          <button class="delete-btn" onclick="deleteEntry('${entry.id}')">×</button>
+        </div>
+      `).join("");
+    }
+
+    function render() {
+      dateLabel();
+      renderSummary();
+      renderTimeline();
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+
+    function openModal(type) {
+      const title = document.getElementById("modalTitle");
+      const content = document.getElementById("modalContent");
+
+      const modals = {
+        today: ["Today", `<p>The main dashboard shows today’s summary, quick actions, and automatic timeline.</p>`],
+
+        quick: ["Quick Add", `
+          <div class="quick-actions" style="grid-template-columns: repeat(2, 1fr);">
+            <button onclick="quickAdd('shake')">🍼 Add Shake</button>
+            <button onclick="quickAdd('water')">💧 Add Water</button>
+            <button onclick="quickAdd('pee')">💦 Add Pee</button>
+            <button onclick="quickAdd('poopy')">💩 Add Poopy</button>
+            <button onclick="openAddModal('food')">🍎 Add Food</button>
+            <button onclick="quickAdd('position')">🔄 Position Change</button>
+            <button onclick="quickAdd('walk')">🚶 Add Walk</button>
+            <button onclick="openAddModal('note')">📝 Add Note</button>
+          </div>
+        `],
+
+        feeding: ["Feeding & Hydration", `
+          <p><strong>Water Goal:</strong> ${countToday("water")} / 3 cups</p>
+          <p><strong>Shakes Today:</strong> ${countToday("shake")}</p>
+          <div class="quick-actions" style="grid-template-columns: repeat(2, 1fr);">
+            <button onclick="quickAdd('shake')">🍼 Add Shake</button>
+            <button onclick="quickAdd('water')">💧 Add Water</button>
+          </div>
+        `],
+
+        diapers: ["Diapers", `
+          <p><strong>Pee Diapers:</strong> ${countToday("pee")}</p>
+          <p><strong>Poopy Diapers:</strong> ${countToday("poopy")}</p>
+          <div class="quick-actions" style="grid-template-columns: repeat(2, 1fr);">
+            <button onclick="quickAdd('pee')">💦 Add Pee</button>
+            <button onclick="quickAdd('poopy')">💩 Add Poopy</button>
+          </div>
+        `],
+
+        hygiene: ["Hygiene", `
+          <div class="quick-actions" style="grid-template-columns: repeat(2, 1fr);">
+            <button onclick="quickAdd('teeth_morning')">🪥 Morning Teeth</button>
+            <button onclick="quickAdd('teeth_evening')">🪥 Evening Teeth</button>
+            <button onclick="quickAdd('full_bath')">🚿 Full Bath</button>
+            <button onclick="quickAdd('sponge_bath')">🛁 Sponge Bath</button>
+            <button onclick="quickAdd('nails')">✂️ Nails Clipped</button>
+            <button onclick="quickAdd('haircut')">💇 Hair Cut</button>
+          </div>
+        `],
+
+        food: ["Food Log", foodForm()],
+
+        activity: ["Activity & Positioning", `
+          <div class="quick-actions" style="grid-template-columns: repeat(2, 1fr);">
+            <button onclick="quickAdd('position')">🔄 Position Change</button>
+            <button onclick="quickAdd('walk')">🚶 Walk</button>
+            <button onclick="quickAdd('exercise')">🏋️ Exercise</button>
+          </div>
+        `],
+
+        health: ["Health & Meds", healthForm()],
+
+        appointments: ["Appointments", `
+          <p>This section will track doctor, dentist, ALTCS, therapy, and next appointment notes.</p>
+          <textarea placeholder="Appointment notes..."></textarea>
+          <button class="primary-btn" style="margin-top:12px;" onclick="quickAdd('note', 'Appointment note added')">Save Appointment Note</button>
+        `],
+
+        supplies: ["Supplies", `
+          <p>Supply inventory will go here next: enemas, diapers, gloves, bottle nipples, clothes, and reorder reminders.</p>
+        `],
+
+        notes: ["Concerns & Notes", noteForm()],
+
+        contacts: ["Doctors & Contacts", `
+          <p>Contact list will go here next: doctors, dentist, ALTCS, pharmacy, and suppliers.</p>
+        `],
+
+        reports: ["Reports", `
+          <p><strong>This Week / Month reports are coming next.</strong></p>
+          <p>For now, today has

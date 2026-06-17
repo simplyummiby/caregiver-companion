@@ -1,15 +1,14 @@
 <!--
 Caregiver Companion
-Version: 0.4
+Version: 0.5
 Date: June 16, 2026
 Changes:
-- Built full Diapers module
-- Added diaper summary cards
-- Added last pee / last poopy display
-- Added manual diaper time entry
-- Added optional diaper notes
-- Added filtered diaper timeline
-Previous Version: v0.3 Wake Up time entry
+- Built full Hygiene module
+- Added teeth, bath, nails, and haircut tracking
+- Added manual hygiene time entry
+- Added last done cards for nails and haircut
+- Added filtered hygiene timeline
+Previous Version: v0.4 Diapers module
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -559,8 +558,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
   </div>
 
   <script>
-    const STORAGE_KEY = "caregiverCompanion_v04";
-    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v04";
+    const STORAGE_KEY = "caregiverCompanion_v05";
+    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v05";
 
     let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -645,6 +644,13 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       });
     }
 
+    function dateShort(timestamp) {
+      return new Date(timestamp).toLocaleDateString([], {
+        month: "short",
+        day: "numeric"
+      });
+    }
+
     function dateLabel() {
       const today = new Date();
 
@@ -669,6 +675,13 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       return [...todayEntries()].reverse().find(entry => entry.type === type);
     }
 
+    function latestEver(type) {
+      return [...entries]
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+        .reverse()
+        .find(entry => entry.type === type);
+    }
+
     function firstToday(type) {
       return todayEntries().find(entry => entry.type === type);
     }
@@ -682,6 +695,12 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
     function feedingEntries() {
       return todayEntries().filter(entry =>
         ["wake", "shake", "water", "food"].includes(entry.type)
+      );
+    }
+
+    function hygieneEntries() {
+      return todayEntries().filter(entry =>
+        ["teeth_morning", "teeth_evening", "full_bath", "sponge_bath", "nails", "haircut"].includes(entry.type)
       );
     }
 
@@ -702,10 +721,6 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       }
     }
 
-    function quickAddDiaper(type) {
-      quickAdd(type);
-    }
-
     function saveManualDiaper() {
       const diaperType = document.getElementById("diaperTypeInput").value;
       const timeInput = document.getElementById("diaperTimeInput").value;
@@ -713,6 +728,22 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
 
       if (!diaperType || !timeInput) return;
 
+      saveManualTimedEntry(diaperType, timeInput, notes);
+      openModal("diapers");
+    }
+
+    function saveManualHygiene() {
+      const hygieneType = document.getElementById("hygieneTypeInput").value;
+      const timeInput = document.getElementById("hygieneTimeInput").value;
+      const notes = document.getElementById("hygieneNotesInput").value.trim();
+
+      if (!hygieneType || !timeInput) return;
+
+      saveManualTimedEntry(hygieneType, timeInput, notes);
+      openModal("hygiene");
+    }
+
+    function saveManualTimedEntry(type, timeInput, details = "") {
       const today = new Date();
       const [hours, minutes] = timeInput.split(":");
 
@@ -723,14 +754,13 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
 
       entries.push({
         id: crypto.randomUUID(),
-        type: diaperType,
-        details: notes,
+        type,
+        details,
         timestamp: today.toISOString()
       });
 
       save();
       render();
-      openModal("diapers");
     }
 
     function removeExistingWakeUp() {
@@ -923,8 +953,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
               <div class="quick-group">
                 <h3>💩 Diapers</h3>
                 <div class="quick-buttons">
-                  <button onclick="quickAddDiaper('pee')">💦 Pee</button>
-                  <button onclick="quickAddDiaper('poopy')">💩 Poopy</button>
+                  <button onclick="quickAdd('pee')">💦 Pee</button>
+                  <button onclick="quickAdd('poopy')">💩 Poopy</button>
                 </div>
               </div>
 
@@ -951,16 +981,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
 
         hygiene: {
           title: "Hygiene",
-          html: `
-            <div class="quick-buttons">
-              <button onclick="quickAdd('teeth_morning')">🪥 Morning Teeth</button>
-              <button onclick="quickAdd('teeth_evening')">🪥 Evening Teeth</button>
-              <button onclick="quickAdd('full_bath')">🚿 Full Bath</button>
-              <button onclick="quickAdd('sponge_bath')">🛁 Sponge Bath</button>
-              <button onclick="quickAdd('nails')">✂️ Nails Clipped</button>
-              <button onclick="quickAdd('haircut')">💇 Hair Cut</button>
-            </div>
-          `
+          html: hygieneHTML()
         },
 
         food: {
@@ -1037,6 +1058,91 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       return modals[type];
     }
 
+    function hygieneHTML() {
+      const teethTotal = countToday("teeth_morning") + countToday("teeth_evening");
+      const bath = hasToday("full_bath") ? "Full" : hasToday("sponge_bath") ? "Sponge" : "No";
+      const lastNails = latestEver("nails");
+      const lastHaircut = latestEver("haircut");
+      const items = hygieneEntries();
+
+      return `
+        <div class="mini-summary-grid">
+          <div class="mini-card">
+            <strong>${teethTotal} / 2</strong>
+            <span>Teeth Today</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${bath}</strong>
+            <span>Bath Today</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${lastNails ? dateShort(lastNails.timestamp) : "—"}</strong>
+            <span>Last Nails</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${lastHaircut ? dateShort(lastHaircut.timestamp) : "—"}</strong>
+            <span>Last Haircut</span>
+          </div>
+        </div>
+
+        <div class="section" style="box-shadow:none;">
+          <h2>Quick Add</h2>
+          <div class="quick-buttons">
+            <button onclick="quickAdd('teeth_morning')">🪥 Morning Teeth</button>
+            <button onclick="quickAdd('teeth_evening')">🪥 Evening Teeth</button>
+            <button onclick="quickAdd('full_bath')">🚿 Full Bath</button>
+            <button onclick="quickAdd('sponge_bath')">🛁 Sponge Bath</button>
+            <button onclick="quickAdd('nails')">✂️ Nails Clipped</button>
+            <button onclick="quickAdd('haircut')">💇 Hair Cut</button>
+          </div>
+        </div>
+
+        <div class="section" style="box-shadow:none;">
+          <h2>Manual Hygiene Entry</h2>
+
+          <div class="form-row">
+            <div>
+              <label for="hygieneTypeInput">Type</label>
+              <select id="hygieneTypeInput">
+                <option value="teeth_morning">Morning Teeth</option>
+                <option value="teeth_evening">Evening Teeth</option>
+                <option value="full_bath">Full Bath</option>
+                <option value="sponge_bath">Sponge Bath</option>
+                <option value="nails">Nails Clipped</option>
+                <option value="haircut">Hair Cut</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="hygieneTimeInput">Time</label>
+              <input id="hygieneTimeInput" type="time" />
+            </div>
+          </div>
+
+          <label for="hygieneNotesInput">Notes</label>
+          <textarea id="hygieneNotesInput" placeholder="Optional notes..."></textarea>
+
+          <button class="primary-btn" style="margin-top:14px;" onclick="saveManualHygiene()">
+            Save Hygiene Entry
+          </button>
+        </div>
+
+        <div class="section" style="box-shadow:none; margin-bottom:0;">
+          <h2>Hygiene Timeline</h2>
+          <div class="timeline">
+            ${
+              items.length
+                ? items.map(entry => timelineItemHTML(entry)).join("")
+                : `<div class="empty">No hygiene entries yet today.</div>`
+            }
+          </div>
+        </div>
+      `;
+    }
+
     function diapersHTML() {
       const peeCount = countToday("pee");
       const poopyCount = countToday("poopy");
@@ -1046,32 +1152,17 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
 
       return `
         <div class="mini-summary-grid">
-          <div class="mini-card">
-            <strong>${peeCount}</strong>
-            <span>Pee Diapers</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${poopyCount}</strong>
-            <span>Poopy Diapers</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${lastPee ? timeLabel(lastPee.timestamp) : "—"}</strong>
-            <span>Last Pee</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${lastPoopy ? timeLabel(lastPoopy.timestamp) : "—"}</strong>
-            <span>Last Poopy</span>
-          </div>
+          <div class="mini-card"><strong>${peeCount}</strong><span>Pee Diapers</span></div>
+          <div class="mini-card"><strong>${poopyCount}</strong><span>Poopy Diapers</span></div>
+          <div class="mini-card"><strong>${lastPee ? timeLabel(lastPee.timestamp) : "—"}</strong><span>Last Pee</span></div>
+          <div class="mini-card"><strong>${lastPoopy ? timeLabel(lastPoopy.timestamp) : "—"}</strong><span>Last Poopy</span></div>
         </div>
 
         <div class="section" style="box-shadow:none;">
           <h2>Quick Add</h2>
           <div class="quick-buttons">
-            <button onclick="quickAddDiaper('pee')">💦 Add Pee</button>
-            <button onclick="quickAddDiaper('poopy')">💩 Add Poopy</button>
+            <button onclick="quickAdd('pee')">💦 Add Pee</button>
+            <button onclick="quickAdd('poopy')">💩 Add Poopy</button>
           </div>
         </div>
 

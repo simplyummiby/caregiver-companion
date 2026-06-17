@@ -4,7 +4,7 @@ const SUPPLIES_KEY = "caregiverCompanion_supplies";
 const PURCHASES_KEY = "caregiverCompanion_purchases";
 const WISHLIST_KEY = "caregiverCompanion_wishlist";
 const SETTINGS_KEY = "caregiverCompanion_settings";
-const BACKUP_VERSION = "0.8.11";
+const BACKUP_VERSION = "0.8.12";
 
 const LEGACY_KEYS = {
   entries: [
@@ -149,6 +149,7 @@ const icons = {
   position: "🔄",
   walk: "🚶",
   exercise: "🏋️",
+  teeth: "🪥",
   teeth_morning: "🪥",
   teeth_evening: "🪥",
   full_bath: "🚿",
@@ -176,8 +177,9 @@ const labels = {
   position: "Position Change",
   walk: "Walk",
   exercise: "Exercise",
-  teeth_morning: "Morning Teeth Brushed",
-  teeth_evening: "Evening Teeth Brushed",
+  teeth: "Teeth Brushed",
+  teeth_morning: "Teeth Brushed",
+  teeth_evening: "Teeth Brushed",
   full_bath: "Full Bath",
   sponge_bath: "Sponge Bath",
   nails: "Nails Clipped",
@@ -271,6 +273,12 @@ function countToday(type) {
   return todayEntries().filter(entry => entry.type === type).length;
 }
 
+function countTeethToday() {
+  return todayEntries().filter(entry =>
+    ["teeth", "teeth_morning", "teeth_evening"].includes(entry.type)
+  ).length;
+}
+
 function hasToday(type) {
   return todayEntries().some(entry => entry.type === type);
 }
@@ -300,7 +308,7 @@ function feedingEntries() {
 
 function hygieneEntries() {
   return todayEntries().filter(entry =>
-    ["teeth_morning", "teeth_evening", "full_bath", "sponge_bath", "nails", "haircut", "lotion", "laundry"].includes(entry.type)
+    ["teeth", "teeth_morning", "teeth_evening", "full_bath", "sponge_bath", "nails", "haircut", "lotion", "laundry"].includes(entry.type)
   );
 }
 
@@ -932,7 +940,7 @@ function getModalData(type) {
           <div class="quick-group">
             <h3>🪥 Hygiene</h3>
             <div class="quick-buttons">
-              <button onclick="quickAdd('teeth_morning')">🪥 + Teeth</button>
+              <button onclick="quickAdd('teeth')">🪥 + Teeth</button>
               <button onclick="quickAdd('nails')">✂️ + Nails</button>
               <button onclick="quickAdd('lotion')">🧴 + Lotion</button>
             </div>
@@ -1038,7 +1046,7 @@ function manualEntryHTML() {
           <option value="poopy">Poopy Diaper</option>
           <option value="miralax">Miralax</option>
           <option value="enema">Enema</option>
-          <option value="teeth_morning">Teeth</option>
+          <option value="teeth">Teeth</option>
           <option value="nails">Nails</option>
           <option value="lotion">Lotion</option>
           <option value="laundry">Laundry</option>
@@ -1820,7 +1828,7 @@ function activityHTML() {
 }
 
 function hygieneHTML() {
-  const teethTotal = countToday("teeth_morning") + countToday("teeth_evening");
+  const teethTotal = countTeethToday();
   const bath = hasToday("full_bath") ? "Full" : hasToday("sponge_bath") ? "Sponge" : "No";
   const lastNails = latestEver("nails");
   const lastHaircut = latestEver("haircut");
@@ -1844,8 +1852,8 @@ function hygieneHTML() {
     <div class="section" style="box-shadow:none;">
       <h2>Quick Add</h2>
       <div class="quick-buttons">
-        <button onclick="quickAdd('teeth_morning')">🪥 + Morning Teeth</button>
-        <button onclick="quickAdd('teeth_evening')">🪥 + Evening Teeth</button>
+        <button onclick="quickAdd('teeth')">🪥 + Teeth</button>
+        <button onclick="quickAdd('teeth_evening')">🪥 + Teeth</button>
         <button onclick="quickAdd('full_bath')">🚿 + Full Bath</button>
         <button onclick="quickAdd('sponge_bath')">🛁 + Sponge Bath</button>
         <button onclick="quickAdd('nails')">✂️ + Nails Clipped</button>
@@ -1857,7 +1865,7 @@ function hygieneHTML() {
         <button onclick="recordLaundry('Blankets')">🧸 + Blankets</button>
         <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
         <button onclick="recordLaundry('Other')">📦 + Other</button>
-        <button onclick="openManualEntryModal('teeth_morning')">⏰ Manual Hygiene/Laundry</button>
+        <button onclick="openManualEntryModal('teeth')">⏰ Manual Hygiene/Laundry</button>
       </div>
     </div>
     <div class="section" style="box-shadow:none;">

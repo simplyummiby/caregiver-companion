@@ -1,12 +1,11 @@
 <!--
 Caregiver Companion
-Version: 0.8.6
+Version: 0.8.7
 Date: June 16, 2026
 Changes:
-- Added laundry tracking under Hygiene & Care Tasks
-- Added laundry dashboard card with weekly load count
-- Added laundry quick log buttons by load type
-- Added weekly/monthly/average laundry summaries
+- Improved dashboard labels for weekly Enema and Laundry cards
+- Laundry card now displays weekly count in a clearer weekly format
+- Enema card now shows Enema label consistently instead of only days/none
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
@@ -14,7 +13,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.5 home quick logs for routines and hygiene
+Previous Version: v0.8.6 Laundry Tracking
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -710,13 +709,13 @@ textarea {
           <div class="summary-card routine-summary-card" id="enemaCard">
             <span class="icon">⚕️</span>
             <strong id="enemaCount">0 / 2 wk</strong>
-            <span id="enemaDays">None</span>
+            <span id="enemaDetails">Enema</span>
           </div>
 
           <div class="summary-card laundry-summary-card" id="laundryCard">
             <span class="icon">🧺</span>
-            <strong id="laundryCount">0</strong>
-            <span>this wk</span>
+            <strong id="laundryCount">0 / wk</strong>
+            <span id="laundryDetails">Laundry</span>
           </div>
 
           <div class="summary-card"><span class="icon">🌡</span><strong id="latestTemp">—</strong><span>Temp</span></div>
@@ -812,6 +811,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.6" defer></script>
+    <script src="./app.js?v=0.8.7" defer></script>
 </body>
 </html>

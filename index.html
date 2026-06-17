@@ -1,12 +1,16 @@
 <!--
 Caregiver Companion
-Version: 0.7.1
+Version: 0.8.1
 Date: June 16, 2026
 Changes:
-- Upgraded dashboard medication card
-- Next Med card now shows status, medication name, dose, and due time
-- Added Due Soon and Overdue visual states
-Previous Version: v0.7 Health & Meds module
+- Fixed stylesheet/script loading paths for GitHub Pages preview
+- Built Supplies & Inventory module
+- Added dashboard supplies status card
+- Added inventory items with low-stock warnings
+- Added quantity +/- controls
+- Added purchase log that updates inventory
+- Added wishlist checklist
+Previous Version: v0.8 Supplies & Inventory
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -16,8 +20,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Caregiver Companion</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="app.js" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=0.8.1" />
+  <script src="./app.js?v=0.8.1" defer></script>
 </head>
 
 <body>
@@ -72,6 +76,12 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
             <span class="icon">💊</span>
             <strong id="nextMedStatus">—</strong>
             <span id="nextMedDetails">Next Med</span>
+          </div>
+
+          <div class="summary-card supplies-summary-card" id="suppliesCard">
+            <span class="icon">📦</span>
+            <strong id="suppliesStatus">OK</strong>
+            <span id="suppliesDetails">Supplies</span>
           </div>
         </div>
       </section>

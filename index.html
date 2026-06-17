@@ -1,12 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.8.8
+Version: 0.8.9
 Date: June 16, 2026
 Changes:
-- Switched to permanent localStorage keys so data survives new app versions
-- Added migration from older versioned storage keys
-- Added JSON backup export and import in Settings
-- Added local-only storage warning
+- Added Blankets as a top-level laundry category
+- Kept permanent localStorage keys so data survives new app versions
+- Kept JSON backup export and import in Settings
+- Added local storage status check in Settings
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
@@ -14,7 +14,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.7 weekly dashboard label cleanup
+Previous Version: v0.8.8 stable local storage and backup
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -778,6 +778,7 @@ textarea {
               <button onclick="recordLaundry('Clothing / Jumpers')">🧺 + Clothing</button>
               <button onclick="recordLaundry('Bed Pads')">🛏️ + Bed Pads</button>
               <button onclick="recordLaundry('Mattress Pads')">🛌 + Mattress Pads</button>
+              <button onclick="recordLaundry('Blankets')">🧸 + Blankets</button>
               <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
               <button onclick="recordLaundry('Other')">📦 + Other</button>
             </div>
@@ -812,6 +813,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.8" defer></script>
+    <script src="./app.js?v=0.8.9" defer></script>
 </body>
 </html>

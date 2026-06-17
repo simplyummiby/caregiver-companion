@@ -1,9 +1,9 @@
-const STORAGE_KEY = "caregiverCompanion_v086";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v086";
+const STORAGE_KEY = "caregiverCompanion_v087";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v087";
 
-const SUPPLIES_KEY = "caregiverCompanion_supplies_v086";
-const PURCHASES_KEY = "caregiverCompanion_purchases_v086";
-const WISHLIST_KEY = "caregiverCompanion_wishlist_v086";
+const SUPPLIES_KEY = "caregiverCompanion_supplies_v087";
+const PURCHASES_KEY = "caregiverCompanion_purchases_v087";
+const WISHLIST_KEY = "caregiverCompanion_wishlist_v087";
 
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -398,7 +398,9 @@ function renderRoutineDashboard() {
 
   document.getElementById("miralaxCount").textContent = `${miralaxToday} / 3`;
   document.getElementById("enemaCount").textContent = `${enemasThisWeek.length} / 2 wk`;
-  document.getElementById("enemaDays").textContent = enemaDayNames.length ? enemaDayNames.join(", ") : "None";
+  document.getElementById("enemaDetails").textContent = enemaDayNames.length
+    ? `Enema: ${enemaDayNames.join(", ")}`
+    : "Enema";
 
   miralaxCard.classList.remove("routine-good", "routine-warning", "routine-alert");
   enemaCard.classList.remove("routine-good", "routine-warning", "routine-alert");
@@ -421,10 +423,14 @@ function renderRoutineDashboard() {
 function renderLaundryDashboard() {
   const laundryCard = document.getElementById("laundryCard");
   const laundryCount = document.getElementById("laundryCount");
+  const laundryDetails = document.getElementById("laundryDetails");
 
-  if (!laundryCard || !laundryCount) return;
+  if (!laundryCard || !laundryCount || !laundryDetails) return;
 
-  laundryCount.textContent = laundryThisWeek().length;
+  const loadsThisWeek = laundryThisWeek().length;
+
+  laundryCount.textContent = `${loadsThisWeek} / wk`;
+  laundryDetails.textContent = "Laundry";
 }
 
 function removeExistingWakeUp() {

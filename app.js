@@ -536,6 +536,147 @@ function saveWakeUpManual() {
   closeModal();
 }
 
+
+function timestampFromTodayTime(timeInput) {
+  const today = new Date();
+  const [hours, minutes] = timeInput.split(":");
+
+  today.setHours(Number(hours));
+  today.setMinutes(Number(minutes));
+  today.setSeconds(0);
+  today.setMilliseconds(0);
+
+  return today.toISOString();
+}
+
+function saveManualQuickEntry() {
+  const type = document.getElementById("manualTypeInput").value;
+  const timeInput = document.getElementById("manualTimeInput").value;
+  const detailsInput = document.getElementById("manualDetailsInput");
+  const details = detailsInput ? detailsInput.value.trim() : "";
+
+  if (!type || !timeInput) return;
+
+  const extra = {};
+
+  if (type === "laundry") {
+    const loadType = document.getElementById("manualLaundryTypeInput").value;
+    extra.loadType = loadType;
+    extra.details = loadType;
+  }
+
+  entries.push({
+    id: crypto.randomUUID(),
+    type,
+    details: type === "laundry" ? extra.details : details,
+    timestamp: timestampFromTodayTime(timeInput),
+    ...extra
+  });
+
+  save();
+  render();
+
+  if (currentModal && currentModal !== "manualEntry") {
+    refreshOpenModal();
+  } else {
+    closeModal();
+  }
+}
+
+function openManualEntryModal(defaultType = "") {
+  openModal("manualEntry");
+
+  setTimeout(() => {
+    const typeInput = document.getElementById("manualTypeInput");
+    if (typeInput && defaultType) {
+      typeInput.value = defaultType;
+      toggleManualLaundryFields();
+    }
+  }, 0);
+}
+
+function toggleManualLaundryFields() {
+  const typeInput = document.getElementById("manualTypeInput");
+  const laundryFields = document.getElementById("manualLaundryFields");
+  const detailsWrap = document.getElementById("manualDetailsWrap");
+
+  if (!typeInput || !laundryFields || !detailsWrap) return;
+
+  const isLaundry = typeInput.value === "laundry";
+
+  laundryFields.style.display = isLaundry ? "block" : "none";
+  detailsWrap.style.display = isLaundry ? "none" : "block";
+}
+
+function openEditEntryModal(id) {
+  const entry = entries.find(item => item.id === id);
+
+  if (!entry) return;
+
+  currentModal = "editEntry";
+
+  document.getElementById("modalTitle").textContent = "Edit Timeline Entry";
+  document.getElementById("modalContent").innerHTML = editEntryHTML(entry);
+  document.getElementById("modalBackdrop").classList.add("show");
+}
+
+function editEntryHTML(entry) {
+  const entryTime = new Date(entry.timestamp).toTimeString().slice(0, 5);
+  const entryDate = new Date(entry.timestamp).toISOString().slice(0, 10);
+
+  return `
+    <p style="color:var(--muted);">Update the date, time, or notes for this timeline entry.</p>
+
+    <div class="mini-card" style="text-align:left;">
+      <strong>${icons[entry.type] || ""} ${labels[entry.type] || entry.type}</strong>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="editDateInput">Date</label>
+        <input id="editDateInput" type="date" value="${entryDate}" />
+      </div>
+
+      <div>
+        <label for="editTimeInput">Time</label>
+        <input id="editTimeInput" type="time" value="${entryTime}" />
+      </div>
+    </div>
+
+    <label for="editDetailsInput">Notes / Details</label>
+    <textarea id="editDetailsInput">${entry.details || ""}</textarea>
+
+    <button class="primary-btn" style="margin-top:14px;" onclick="saveEditedEntry('${entry.id}')">
+      Save Changes
+    </button>
+  `;
+}
+
+function saveEditedEntry(id) {
+  const dateInput = document.getElementById("editDateInput").value;
+  const timeInput = document.getElementById("editTimeInput").value;
+  const details = document.getElementById("editDetailsInput").value.trim();
+
+  if (!dateInput || !timeInput) return;
+
+  const newTimestamp = new Date(`${dateInput}T${timeInput}:00`).toISOString();
+
+  entries = entries.map(entry => {
+    if (entry.id !== id) return entry;
+
+    return {
+      ...entry,
+      timestamp: newTimestamp,
+      details
+    };
+  });
+
+  save();
+  render();
+  closeModal();
+}
+
+
 function deleteEntry(id) {
   entries = entries.filter(entry => entry.id !== id);
   save();
@@ -645,7 +786,10 @@ function timelineItemHTML(entry) {
         <strong>${labels[entry.type] || entry.type}</strong>
         ${entry.details ? `<br><span style="color: var(--muted);">${entry.details}</span>` : ""}
       </div>
-      <button class="delete-btn" onclick="deleteEntry('${entry.id}')">×</button>
+      <div>
+        <button class="edit-btn" onclick="openEditEntryModal('${entry.id}')">Edit</button>
+        <button class="delete-btn" onclick="deleteEntry('${entry.id}')">×</button>
+      </div>
     </div>
   `;
 }
@@ -757,11 +901,14 @@ function getModalData(type) {
             <div class="quick-buttons">
               <button onclick="openModal('wake')">☀️ + Wake Up</button>
               <button onclick="openModal('notes')">📝 + Note</button>
+              <button onclick="openManualEntryModal()">⏰ Manual Entry</button>
             </div>
           </div>
         </div>
       `
     },
+
+    manualEntry: { title: "Manual Entry", html: manualEntryHTML() },
 
     feeding: { title: "Feeding & Hydration", html: feedingHydrationHTML() },
     diapers: { title: "Diapers", html: diapersHTML() },
@@ -822,6 +969,62 @@ function getModalData(type) {
   return modals[type];
 }
 
+
+function manualEntryHTML() {
+  return `
+    <p style="color:var(--muted);">Use this when you forgot to tap a quick-log button at the actual time.</p>
+
+    <div class="form-row">
+      <div>
+        <label for="manualTypeInput">Entry Type</label>
+        <select id="manualTypeInput" onchange="toggleManualLaundryFields()">
+          <option value="shake">Shake</option>
+          <option value="water">Water</option>
+          <option value="pee">Pee Diaper</option>
+          <option value="poopy">Poopy Diaper</option>
+          <option value="miralax">Miralax</option>
+          <option value="enema">Enema</option>
+          <option value="teeth_morning">Teeth</option>
+          <option value="nails">Nails</option>
+          <option value="lotion">Lotion</option>
+          <option value="laundry">Laundry</option>
+          <option value="position">Position Change</option>
+          <option value="walk">Walk</option>
+          <option value="exercise">Exercise</option>
+          <option value="note">Note</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="manualTimeInput">Time</label>
+        <input id="manualTimeInput" type="time" />
+      </div>
+    </div>
+
+    <div id="manualLaundryFields" style="display:none;">
+      <label for="manualLaundryTypeInput">Laundry Type</label>
+      <select id="manualLaundryTypeInput">
+        <option>Clothing / Jumpers</option>
+        <option>Bed Pads</option>
+        <option>Mattress Pads</option>
+        <option>Blankets</option>
+        <option>Mixed Load</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div id="manualDetailsWrap">
+      <label for="manualDetailsInput">Notes / Details</label>
+      <textarea id="manualDetailsInput" placeholder="Optional notes..."></textarea>
+    </div>
+
+    <button class="primary-btn" style="margin-top:14px;" onclick="saveManualQuickEntry()">
+      + Save Manual Entry
+    </button>
+  `;
+}
+
+
 function healthHTML() {
   const latestTemp = latestToday("temperature");
   const latestHealth = latestToday("health");
@@ -849,6 +1052,7 @@ function healthHTML() {
       <div class="quick-buttons">
         <button onclick="recordMiralax()">🥤 + Miralax</button>
         <button onclick="recordEnema()">⚕️ + Enema</button>
+        <button onclick="openManualEntryModal('miralax')">⏰ Manual Routine</button>
       </div>
 
       <label for="enemaTimeInput">Manual Enema Time</label>
@@ -1527,6 +1731,7 @@ function activityHTML() {
         <button onclick="quickAdd('position')">🔄 + Position Change</button>
         <button onclick="quickAdd('walk')">🚶 + Walk</button>
         <button onclick="quickAdd('exercise')">🏋️ + Exercise</button>
+        <button onclick="openManualEntryModal('position')">⏰ Manual Activity</button>
       </div>
     </div>
 
@@ -1598,6 +1803,7 @@ function hygieneHTML() {
         <button onclick="recordLaundry('Blankets')">🧸 + Blankets</button>
         <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
         <button onclick="recordLaundry('Other')">📦 + Other</button>
+        <button onclick="openManualEntryModal('teeth_morning')">⏰ Manual Hygiene/Laundry</button>
       </div>
     </div>
     <div class="section" style="box-shadow:none;">

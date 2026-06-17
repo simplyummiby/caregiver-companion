@@ -1,9 +1,9 @@
-const STORAGE_KEY = "caregiverCompanion_v085";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v085";
+const STORAGE_KEY = "caregiverCompanion_v086";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v086";
 
-const SUPPLIES_KEY = "caregiverCompanion_supplies_v085";
-const PURCHASES_KEY = "caregiverCompanion_purchases_v085";
-const WISHLIST_KEY = "caregiverCompanion_wishlist_v085";
+const SUPPLIES_KEY = "caregiverCompanion_supplies_v086";
+const PURCHASES_KEY = "caregiverCompanion_purchases_v086";
+const WISHLIST_KEY = "caregiverCompanion_wishlist_v086";
 
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -52,6 +52,7 @@ const icons = {
   miralax: "🥤",
   enema: "⚕️",
   lotion: "🧴",
+  laundry: "🧺",
   note: "📝",
   mood: "😊"
 };
@@ -78,6 +79,7 @@ const labels = {
   miralax: "Miralax",
   enema: "Enema",
   lotion: "Lotion",
+  laundry: "Laundry",
   note: "Note",
   mood: "Mood"
 };
@@ -189,7 +191,7 @@ function feedingEntries() {
 
 function hygieneEntries() {
   return todayEntries().filter(entry =>
-    ["teeth_morning", "teeth_evening", "full_bath", "sponge_bath", "nails", "haircut", "lotion"].includes(entry.type)
+    ["teeth_morning", "teeth_evening", "full_bath", "sponge_bath", "nails", "haircut", "lotion", "laundry"].includes(entry.type)
   );
 }
 
@@ -230,6 +232,52 @@ function thisWeekEntries(type) {
 
 function weekdayShort(timestamp) {
   return new Date(timestamp).toLocaleDateString([], { weekday: "short" });
+}
+
+function thisMonthEntries(type) {
+  const now = new Date();
+
+  return entries
+    .filter(entry => {
+      if (entry.type !== type) return false;
+      const entryDate = new Date(entry.timestamp);
+      return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+    })
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+}
+
+function laundryThisWeek() {
+  return thisWeekEntries("laundry");
+}
+
+function laundryThisMonth() {
+  return thisMonthEntries("laundry");
+}
+
+function laundryAveragePerWeek() {
+  const laundryEntries = entries
+    .filter(entry => entry.type === "laundry")
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  if (!laundryEntries.length) return "0.0";
+
+  const first = new Date(laundryEntries[0].timestamp);
+  const now = new Date();
+  const days = Math.max(1, (now - first) / 86400000);
+  const weeks = Math.max(1, days / 7);
+
+  return (laundryEntries.length / weeks).toFixed(1);
+}
+
+function laundryBreakdown(entriesToCount) {
+  const types = ["Clothing / Jumpers", "Bed Pads", "Mattress Pads", "Mixed Load", "Other"];
+
+  return types.map(type => {
+    return {
+      type,
+      count: entriesToCount.filter(entry => entry.loadType === type || entry.details === type).length
+    };
+  });
 }
 
 function activityMinutesToday() {
@@ -314,6 +362,10 @@ function saveManualActivity() {
   openModal("activity");
 }
 
+function recordLaundry(loadType) {
+  quickAdd("laundry", loadType, { loadType });
+}
+
 function recordMiralax() {
   quickAdd("miralax");
 }
@@ -364,6 +416,15 @@ function renderRoutineDashboard() {
   } else {
     enemaCard.classList.add("routine-alert");
   }
+}
+
+function renderLaundryDashboard() {
+  const laundryCard = document.getElementById("laundryCard");
+  const laundryCount = document.getElementById("laundryCount");
+
+  if (!laundryCard || !laundryCount) return;
+
+  laundryCount.textContent = laundryThisWeek().length;
 }
 
 function removeExistingWakeUp() {
@@ -496,6 +557,7 @@ function renderSummary() {
 
   renderSuppliesDashboard();
   renderRoutineDashboard();
+  renderLaundryDashboard();
 
   const mood = latestToday("mood");
   document.getElementById("moodDisplay").textContent = mood ? mood.details : "Not set";
@@ -614,6 +676,17 @@ function getModalData(type) {
               <button onclick="quickAdd('teeth_morning')">🪥 + Teeth</button>
               <button onclick="quickAdd('nails')">✂️ + Nails</button>
               <button onclick="quickAdd('lotion')">🧴 + Lotion</button>
+            </div>
+          </div>
+
+          <div class="quick-group">
+            <h3>🧺 Laundry</h3>
+            <div class="quick-buttons">
+              <button onclick="recordLaundry('Clothing / Jumpers')">🧺 + Clothing</button>
+              <button onclick="recordLaundry('Bed Pads')">🛏️ + Bed Pads</button>
+              <button onclick="recordLaundry('Mattress Pads')">🛌 + Mattress Pads</button>
+              <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
+              <button onclick="recordLaundry('Other')">📦 + Other</button>
             </div>
           </div>
 
@@ -1408,6 +1481,11 @@ function hygieneHTML() {
   const lastNails = latestEver("nails");
   const lastHaircut = latestEver("haircut");
   const lastLotion = latestEver("lotion");
+  const laundryWeek = laundryThisWeek();
+  const laundryMonth = laundryThisMonth();
+  const laundryAverage = laundryAveragePerWeek();
+  const laundryWeeklyBreakdown = laundryBreakdown(laundryWeek);
+  const recentLaundry = [...laundryWeek].reverse().slice(0, 5);
   const items = hygieneEntries();
 
   return `
@@ -1417,6 +1495,7 @@ function hygieneHTML() {
       <div class="mini-card"><strong>${lastNails ? dateShort(lastNails.timestamp) : "—"}</strong><span>Last Nails</span></div>
       <div class="mini-card"><strong>${lastHaircut ? dateShort(lastHaircut.timestamp) : "—"}</strong><span>Last Haircut</span></div>
       <div class="mini-card"><strong>${lastLotion ? dateShort(lastLotion.timestamp) : "—"}</strong><span>Last Lotion</span></div>
+      <div class="mini-card"><strong>${laundryWeek.length}</strong><span>Laundry This Week</span></div>
     </div>
     <div class="section" style="box-shadow:none;">
       <h2>Quick Add</h2>
@@ -1428,10 +1507,45 @@ function hygieneHTML() {
         <button onclick="quickAdd('nails')">✂️ + Nails Clipped</button>
         <button onclick="quickAdd('lotion')">🧴 + Lotion</button>
         <button onclick="quickAdd('haircut')">💇 + Hair Cut</button>
+        <button onclick="recordLaundry('Clothing / Jumpers')">🧺 + Clothing</button>
+        <button onclick="recordLaundry('Bed Pads')">🛏️ + Bed Pads</button>
+        <button onclick="recordLaundry('Mattress Pads')">🛌 + Mattress Pads</button>
+        <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
+        <button onclick="recordLaundry('Other')">📦 + Other</button>
       </div>
     </div>
+    <div class="section" style="box-shadow:none;">
+      <h2>Laundry Summary</h2>
+
+      <div class="mini-summary-grid">
+        <div class="mini-card"><strong>${laundryWeek.length}</strong><span>This Week</span></div>
+        <div class="mini-card"><strong>${laundryMonth.length}</strong><span>This Month</span></div>
+        <div class="mini-card"><strong>${laundryAverage}</strong><span>Avg Loads / Week</span></div>
+        <div class="mini-card"><strong>${recentLaundry.length ? timeLabel(recentLaundry[0].timestamp) : "—"}</strong><span>Last Load</span></div>
+      </div>
+
+      <h2>This Week Breakdown</h2>
+      <div class="laundry-breakdown">
+        ${laundryWeeklyBreakdown.map(row => `
+          <div class="breakdown-row">
+            <strong>${row.type}</strong>
+            <span>${row.count}</span>
+          </div>
+        `).join("")}
+      </div>
+
+      <h2 style="margin-top:18px;">Recent Laundry</h2>
+      <div class="timeline">
+        ${
+          recentLaundry.length
+            ? recentLaundry.map(entry => timelineItemHTML(entry)).join("")
+            : `<div class="empty">No laundry recorded this week.</div>`
+        }
+      </div>
+    </div>
+
     <div class="section" style="box-shadow:none; margin-bottom:0;">
-      <h2>Hygiene Timeline</h2>
+      <h2>Hygiene & Care Timeline</h2>
       <div class="timeline">${items.length ? items.map(entry => timelineItemHTML(entry)).join("") : `<div class="empty">No hygiene entries yet today.</div>`}</div>
     </div>
   `;

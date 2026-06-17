@@ -1,18 +1,18 @@
-const STORAGE_KEY = "caregiverCompanion_v08";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v08";
+const STORAGE_KEY = "caregiverCompanion_v083";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v083";
 
-const SUPPLIES_KEY = "caregiverCompanion_supplies_v08";
-const PURCHASES_KEY = "caregiverCompanion_purchases_v08";
-const WISHLIST_KEY = "caregiverCompanion_wishlist_v08";
+const SUPPLIES_KEY = "caregiverCompanion_supplies_v083";
+const PURCHASES_KEY = "caregiverCompanion_purchases_v083";
+const WISHLIST_KEY = "caregiverCompanion_wishlist_v083";
 
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
 let supplies = JSON.parse(localStorage.getItem(SUPPLIES_KEY)) || [
-  { id: crypto.randomUUID(), name: "Enemas", category: "Medical", quantity: 4, lowAt: 6, notes: "" },
-  { id: crypto.randomUUID(), name: "Gloves", category: "Medical", quantity: 8, lowAt: 4, notes: "" },
-  { id: crypto.randomUUID(), name: "Diapers", category: "Diapering", quantity: 24, lowAt: 10, notes: "" },
-  { id: crypto.randomUUID(), name: "Diaper Pail Refills", category: "Diapering", quantity: 1, lowAt: 2, notes: "" },
-  { id: crypto.randomUUID(), name: "Bottle Nipples", category: "Feeding", quantity: 3, lowAt: 2, notes: "" }
+  { id: crypto.randomUUID(), name: "Enemas", category: "Medical", brand: "", url: "", quantity: 4, lowAt: 6, notes: "" },
+  { id: crypto.randomUUID(), name: "Gloves", category: "Medical", brand: "", url: "", quantity: 8, lowAt: 4, notes: "" },
+  { id: crypto.randomUUID(), name: "Diapers", category: "Diapering", brand: "", url: "", quantity: 24, lowAt: 10, notes: "" },
+  { id: crypto.randomUUID(), name: "Diaper Pail Refills", category: "Diapering", brand: "", url: "", quantity: 1, lowAt: 2, notes: "" },
+  { id: crypto.randomUUID(), name: "Bottle Nipples", category: "Feeding", brand: "", url: "", quantity: 3, lowAt: 2, notes: "" }
 ];
 
 let purchases = JSON.parse(localStorage.getItem(PURCHASES_KEY)) || [];
@@ -871,6 +871,18 @@ function suppliesHTML() {
 
       <div class="form-row">
         <div>
+          <label for="supplyBrandInput">Brand</label>
+          <input id="supplyBrandInput" placeholder="Example: Parent's Choice" />
+        </div>
+
+        <div>
+          <label for="supplyUrlInput">Product URL</label>
+          <input id="supplyUrlInput" type="url" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
           <label for="supplyQuantityInput">Current Quantity</label>
           <input id="supplyQuantityInput" type="number" min="0" placeholder="Example: 4" />
         </div>
@@ -893,14 +905,48 @@ function suppliesHTML() {
       <div class="form-row">
         <div>
           <label for="purchaseItemInput">Item</label>
-          <select id="purchaseItemInput">
+          <select id="purchaseItemInput" onchange="toggleCustomPurchaseFields()">
             ${supplies.map(item => `<option value="${item.id}">${item.name}</option>`).join("")}
+            <option value="custom">+ Custom Item</option>
           </select>
         </div>
 
         <div>
           <label for="purchaseQtyInput">Quantity Purchased</label>
           <input id="purchaseQtyInput" type="number" min="1" placeholder="Example: 2" />
+        </div>
+      </div>
+
+      <div id="customPurchaseFields" style="display:none;">
+        <div class="form-row">
+          <div>
+            <label for="customPurchaseNameInput">Custom Item Name</label>
+            <input id="customPurchaseNameInput" placeholder="Example: New bottles" />
+          </div>
+
+          <div>
+            <label for="customPurchaseCategoryInput">Category</label>
+            <select id="customPurchaseCategoryInput">
+              <option>Medical</option>
+              <option>Diapering</option>
+              <option>Feeding</option>
+              <option>Clothing</option>
+              <option>Equipment</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="purchaseBrandInput">Brand</label>
+          <input id="purchaseBrandInput" placeholder="Example: Parent's Choice" />
+        </div>
+
+        <div>
+          <label for="purchaseUrlInput">Product URL</label>
+          <input id="purchaseUrlInput" type="url" placeholder="https://..." />
         </div>
       </div>
 
@@ -962,6 +1008,8 @@ function supplyItemHTML(item) {
           <h3>${item.name}</h3>
           <div class="supply-meta">
             ${item.category} • Current: ${item.quantity} • Low at: ${item.lowAt || "—"}
+            ${item.brand ? `<br>Brand: ${item.brand}` : ""}
+            ${item.url ? `<br><a href="${item.url}" target="_blank" rel="noopener">Product Link</a>` : ""}
             ${item.notes ? `<br>${item.notes}` : ""}
           </div>
         </div>
@@ -983,8 +1031,10 @@ function purchaseItemHTML(purchase) {
       <strong>${purchase.itemName}</strong>
       <div class="supply-meta">
         ${dateShort(purchase.timestamp)} • Qty: ${purchase.quantity}
+        ${purchase.brand ? ` • Brand: ${purchase.brand}` : ""}
         ${purchase.store ? ` • ${purchase.store}` : ""}
         ${purchase.cost ? ` • $${purchase.cost}` : ""}
+        ${purchase.url ? `<br><a href="${purchase.url}" target="_blank" rel="noopener">Product Link</a>` : ""}
       </div>
     </div>
   `;
@@ -1003,6 +1053,8 @@ function wishlistItemHTML(item) {
 function addSupplyItem() {
   const name = document.getElementById("supplyNameInput").value.trim();
   const category = document.getElementById("supplyCategoryInput").value;
+  const brand = document.getElementById("supplyBrandInput").value.trim();
+  const url = document.getElementById("supplyUrlInput").value.trim();
   const quantity = Number(document.getElementById("supplyQuantityInput").value) || 0;
   const lowAt = Number(document.getElementById("supplyLowAtInput").value) || 0;
   const notes = document.getElementById("supplyNotesInput").value.trim();
@@ -1013,6 +1065,8 @@ function addSupplyItem() {
     id: crypto.randomUUID(),
     name,
     category,
+    brand,
+    url,
     quantity,
     lowAt,
     notes
@@ -1047,31 +1101,75 @@ function deleteSupplyItem(id) {
   openModal("supplies");
 }
 
+function toggleCustomPurchaseFields() {
+  const itemSelect = document.getElementById("purchaseItemInput");
+  const customFields = document.getElementById("customPurchaseFields");
+
+  if (!itemSelect || !customFields) return;
+
+  customFields.style.display = itemSelect.value === "custom" ? "block" : "none";
+}
+
 function recordPurchase() {
   const itemId = document.getElementById("purchaseItemInput").value;
   const quantity = Number(document.getElementById("purchaseQtyInput").value) || 0;
+  const brand = document.getElementById("purchaseBrandInput").value.trim();
+  const url = document.getElementById("purchaseUrlInput").value.trim();
   const store = document.getElementById("purchaseStoreInput").value.trim();
   const cost = document.getElementById("purchaseCostInput").value.trim();
 
   if (!itemId || quantity <= 0) return;
 
-  const item = supplies.find(supply => supply.id === itemId);
-  if (!item) return;
+  let item = null;
 
-  supplies = supplies.map(supply => {
-    if (supply.id !== itemId) return supply;
+  if (itemId === "custom") {
+    const customName = document.getElementById("customPurchaseNameInput").value.trim();
+    const customCategory = document.getElementById("customPurchaseCategoryInput").value;
 
-    return {
-      ...supply,
-      quantity: (Number(supply.quantity) || 0) + quantity
+    if (!customName) return;
+
+    item = {
+      id: crypto.randomUUID(),
+      name: customName,
+      category: customCategory,
+      brand,
+      url,
+      quantity: 0,
+      lowAt: 0,
+      notes: ""
     };
-  });
+
+    supplies.push(item);
+  } else {
+    item = supplies.find(supply => supply.id === itemId);
+    if (!item) return;
+
+    supplies = supplies.map(supply => {
+      if (supply.id !== itemId) return supply;
+
+      return {
+        ...supply,
+        brand: brand || supply.brand || "",
+        url: url || supply.url || "",
+        quantity: (Number(supply.quantity) || 0) + quantity
+      };
+    });
+  }
+
+  if (itemId === "custom") {
+    supplies = supplies.map(supply => {
+      if (supply.id !== item.id) return supply;
+      return { ...supply, quantity: quantity };
+    });
+  }
 
   purchases.push({
     id: crypto.randomUUID(),
-    itemId,
+    itemId: item.id,
     itemName: item.name,
     quantity,
+    brand,
+    url,
     store,
     cost,
     timestamp: new Date().toISOString()

@@ -5,6 +5,61 @@ const SUPPLIES_KEY = "caregiverCompanion_supplies_v087";
 const PURCHASES_KEY = "caregiverCompanion_purchases_v087";
 const WISHLIST_KEY = "caregiverCompanion_wishlist_v087";
 
+
+function safeJSONParse(value, fallback = null) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function getBestLegacyArray(keys) {
+  let best = [];
+
+  keys.forEach(key => {
+    const parsed = safeJSONParse(localStorage.getItem(key), []);
+
+    if (Array.isArray(parsed) && parsed.length > best.length) {
+      best = parsed;
+    }
+  });
+
+  return best;
+}
+
+function migrateLegacyStorage() {
+  const settings = safeJSONParse(localStorage.getItem(SETTINGS_KEY), {});
+  if (settings.legacyMigrated) return;
+
+  const migrations = [
+    { stableKey: STORAGE_KEY, legacyKeys: LEGACY_KEYS.entries },
+    { stableKey: FAVORITES_KEY, legacyKeys: LEGACY_KEYS.favorites },
+    { stableKey: SUPPLIES_KEY, legacyKeys: LEGACY_KEYS.supplies },
+    { stableKey: PURCHASES_KEY, legacyKeys: LEGACY_KEYS.purchases },
+    { stableKey: WISHLIST_KEY, legacyKeys: LEGACY_KEYS.wishlist }
+  ];
+
+  migrations.forEach(item => {
+    const current = safeJSONParse(localStorage.getItem(item.stableKey), null);
+
+    if (Array.isArray(current) && current.length) return;
+
+    const legacy = getBestLegacyArray(item.legacyKeys);
+
+    if (legacy.length) {
+      localStorage.setItem(item.stableKey, JSON.stringify(legacy));
+    }
+  });
+
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+    ...settings,
+    legacyMigrated: true,
+    migratedAt: new Date().toISOString()
+  }));
+}
+
+
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
 let supplies = JSON.parse(localStorage.getItem(SUPPLIES_KEY)) || [
@@ -735,6 +790,23 @@ function getModalData(type) {
       title: "Settings",
       html: `
         <p><strong>Data Storage:</strong> This version saves only on this device using localStorage.</p>
+        <p class="warning-text">Local-only warning: until login/sync is added, data is saved only in this browser on this device.</p>
+
+        <div class="quick-buttons">
+          <button onclick="exportBackup()">⬇️ Export Backup</button>
+          <button onclick="triggerImportBackup()">⬆️ Import Backup</button>
+        </div>
+
+        <input
+          id="backupImportInput"
+          type="file"
+          accept="application/json"
+          style="display:none;"
+          onchange="importBackupFile(event)"
+        />
+
+        <hr style="border:none; border-top:1px solid var(--border); margin:20px 0;">
+
         <button class="primary-btn" onclick="clearAllData()">Clear All Data</button>
       `
     }
@@ -1735,6 +1807,86 @@ function saveNote() {
 
   closeModal();
 }
+
+
+function exportBackup() {
+  const backup = {
+    app: "Caregiver Companion",
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    entries,
+    foodFavorites,
+    supplies,
+    purchases,
+    wishlist
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    type: "application/json"
+  });
+
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(blob);
+  link.download = `caregiver-companion-backup-${dateStamp}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(link.href);
+}
+
+function triggerImportBackup() {
+  const input = document.getElementById("backupImportInput");
+  if (input) input.click();
+}
+
+function importBackupFile(event) {
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const backup = JSON.parse(e.target.result);
+
+      if (!backup || backup.app !== "Caregiver Companion") {
+        alert("This does not look like a Caregiver Companion backup file.");
+        return;
+      }
+
+      const replace = confirm(
+        "Import this backup? This will replace the current saved data on this device."
+      );
+
+      if (!replace) return;
+
+      entries = Array.isArray(backup.entries) ? backup.entries : [];
+      foodFavorites = Array.isArray(backup.foodFavorites) ? backup.foodFavorites : foodFavorites;
+      supplies = Array.isArray(backup.supplies) ? backup.supplies : supplies;
+      purchases = Array.isArray(backup.purchases) ? backup.purchases : [];
+      wishlist = Array.isArray(backup.wishlist) ? backup.wishlist : [];
+
+      save();
+      saveFavorites();
+      saveSupplies();
+      savePurchases();
+      saveWishlist();
+
+      render();
+      openModal("settings");
+      alert("Backup imported successfully.");
+    } catch (error) {
+      alert("Could not import backup. Please check the file and try again.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
 
 function clearAllData() {
   if (!confirm("Clear all saved caregiver entries on this device?")) return;

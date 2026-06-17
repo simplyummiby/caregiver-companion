@@ -442,3 +442,24 @@ textarea {
 
   .checkbox-grid label { width: 100%; }
 }
+
+
+/* Medication dashboard status card */
+.med-summary-card strong {
+  font-size: 1rem;
+}
+
+.med-summary-card span:last-child {
+  display: block;
+  line-height: 1.35;
+}
+
+.med-due-soon {
+  background: #fff7e6;
+  border-color: #f4c86a;
+}
+
+.med-overdue {
+  background: #fff0f0;
+  border-color: #e08b8b;
+}

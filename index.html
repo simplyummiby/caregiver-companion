@@ -1,16 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.2
+Version: 0.3
 Date: June 16, 2026
 Changes:
-- Reworked Quick Log into focused category rows
-- Added Wake Up summary card
-- Added Foods Logged summary card
-- Built stronger Feeding & Hydration modal
-- Added food favorites with localStorage saving
-- Added water as 8 oz / 1 cup per tap
-- Added filtered feeding timeline
-Previous Version: v0.1 starter dashboard
+- Added manual Wake Up time modal
+- Wake Up can now be recorded as current time or entered manually
+- Quick Log stays focused: Shake, Water, Food, Pee, Poopy, Wake Up, Note
+Previous Version: v0.2 Feeding & Hydration
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -30,21 +26,15 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       --primary-dark: #21114d;
       --accent: #8ed8d0;
       --soft-purple: #eee7ff;
-      --soft-blue: #e8f7ff;
       --soft-green: #eaf8ef;
-      --soft-orange: #fff3e6;
-      --soft-pink: #fff0f8;
       --text: #1e1633;
       --muted: #6d6580;
       --border: #ddd7f0;
       --danger: #d9534f;
-      --success: #2f9b63;
       --shadow: 0 10px 25px rgba(42, 25, 87, 0.08);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -53,10 +43,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       color: var(--text);
     }
 
-    .app {
-      display: flex;
-      min-height: 100vh;
-    }
+    .app { display: flex; min-height: 100vh; }
 
     .sidebar {
       width: 260px;
@@ -109,40 +96,32 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       margin-bottom: 22px;
     }
 
-    .title h1 {
-      margin: 0;
-      font-size: 2rem;
-    }
+    .title h1 { margin: 0; font-size: 2rem; }
+    .title p { margin: 6px 0 0; color: var(--muted); }
 
-    .title p {
-      margin: 6px 0 0;
-      color: var(--muted);
+    .status-card,
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
     }
 
     .status-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
       padding: 16px 20px;
-      box-shadow: var(--shadow);
       min-width: 180px;
       text-align: center;
     }
 
     .section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
       padding: 20px;
       margin-bottom: 20px;
-      box-shadow: var(--shadow);
     }
 
     .section h2 {
       margin-top: 0;
       font-size: 1.1rem;
       color: var(--primary);
-      letter-spacing: 0.02em;
     }
 
     .summary-grid {
@@ -195,14 +174,16 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       color: var(--primary-dark);
     }
 
-    .quick-buttons {
+    .quick-buttons,
+    .favorite-wrap {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
 
     button,
-    .primary-btn {
+    .primary-btn,
+    .pill-btn {
       font: inherit;
     }
 
@@ -280,9 +261,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       padding: 18px;
     }
 
-    .modal-backdrop.show {
-      display: flex;
-    }
+    .modal-backdrop.show { display: flex; }
 
     .modal {
       width: min(760px, 100%);
@@ -316,7 +295,6 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       height: 36px;
       cursor: pointer;
       font-size: 1.2rem;
-      flex: 0 0 auto;
     }
 
     label {
@@ -341,16 +319,15 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       resize: vertical;
     }
 
-    .form-row {
+    .form-row,
+    .mini-summary-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, 1fr);
       gap: 14px;
     }
 
     .mini-summary-grid {
-      display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
       margin-bottom: 16px;
     }
 
@@ -386,13 +363,6 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       background: var(--primary);
       width: 0%;
       transition: width 0.2s ease;
-    }
-
-    .favorite-wrap {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 8px;
     }
 
     .favorite-chip {
@@ -447,17 +417,9 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
     }
 
     @media (max-width: 1050px) {
-      .summary-grid {
-        grid-template-columns: repeat(4, 1fr);
-      }
-
-      .quick-log {
-        grid-template-columns: 1fr;
-      }
-
-      .mini-summary-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      .summary-grid { grid-template-columns: repeat(4, 1fr); }
+      .quick-log { grid-template-columns: 1fr; }
+      .mini-summary-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (max-width: 800px) {
@@ -467,9 +429,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
         z-index: 20;
       }
 
-      .sidebar.open {
-        transform: translateX(0);
-      }
+      .sidebar.open { transform: translateX(0); }
 
       .main {
         margin-left: 0;
@@ -477,17 +437,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
         padding: 18px;
       }
 
-      .mobile-menu-btn {
-        display: inline-block;
-      }
-
-      .topbar {
-        align-items: flex-start;
-      }
-
-      .summary-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      .mobile-menu-btn { display: inline-block; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
 
       .timeline-item {
         grid-template-columns: 74px 32px 1fr auto;
@@ -542,53 +493,14 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
         <h2>Today's Summary</h2>
 
         <div class="summary-grid">
-          <div class="summary-card">
-            <span class="icon">☀️</span>
-            <strong id="wakeTime">—</strong>
-            <span>Wake Up</span>
-          </div>
-
-          <div class="summary-card">
-            <span class="icon">🍼</span>
-            <strong id="shakeCount">0</strong>
-            <span>Shakes</span>
-          </div>
-
-          <div class="summary-card">
-            <span class="icon">💧</span>
-            <strong id="waterCount">0 / 3</strong>
-            <span>Water Goal</span>
-          </div>
-
-          <div class="summary-card">
-            <span class="icon">🍎</span>
-            <strong id="foodCount">0</strong>
-            <span>Foods</span>
-          </div>
-
-          <div class="summary-card">
-            <span class="icon">💦</span>
-            <strong id="peeCount">0</strong>
-            <span>Pee</span>
-          </div>
-
-          <div class="summary-card">
-            <span class="icon">💩</span>
-            <strong id="poopyCount">0</strong>
-            <span>Poopy</span>
-          </div>
-
-          <div class="summary-card">
-            <span class="icon">🪥</span>
-            <strong id="teethCount">0 / 2</strong>
-            <span>Teeth</span>
-          </div>
-
-          <div class="summary-card">
-            <span class="icon">🚿</span>
-            <strong id="bathStatus">No</strong>
-            <span>Bath</span>
-          </div>
+          <div class="summary-card"><span class="icon">☀️</span><strong id="wakeTime">—</strong><span>Wake Up</span></div>
+          <div class="summary-card"><span class="icon">🍼</span><strong id="shakeCount">0</strong><span>Shakes</span></div>
+          <div class="summary-card"><span class="icon">💧</span><strong id="waterCount">0 / 3</strong><span>Water Goal</span></div>
+          <div class="summary-card"><span class="icon">🍎</span><strong id="foodCount">0</strong><span>Foods</span></div>
+          <div class="summary-card"><span class="icon">💦</span><strong id="peeCount">0</strong><span>Pee</span></div>
+          <div class="summary-card"><span class="icon">💩</span><strong id="poopyCount">0</strong><span>Poopy</span></div>
+          <div class="summary-card"><span class="icon">🪥</span><strong id="teethCount">0 / 2</strong><span>Teeth</span></div>
+          <div class="summary-card"><span class="icon">🚿</span><strong id="bathStatus">No</strong><span>Bath</span></div>
         </div>
       </section>
 
@@ -616,7 +528,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
           <div class="quick-group">
             <h3>☀️ Daily Notes</h3>
             <div class="quick-buttons">
-              <button onclick="addWakeUp()">☀️ Wake Up</button>
+              <button onclick="openModal('wake')">☀️ Wake Up</button>
               <button onclick="openModal('notes')">📝 Note</button>
             </div>
           </div>
@@ -644,8 +556,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
   </div>
 
   <script>
-    const STORAGE_KEY = "caregiverCompanion_v02";
-    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v02";
+    const STORAGE_KEY = "caregiverCompanion_v03";
+    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v03";
 
     let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -781,20 +693,54 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       }
     }
 
-    function addWakeUp() {
+    function removeExistingWakeUp() {
       const existingWake = firstToday("wake");
 
       if (existingWake) {
-        const replace = confirm(
-          `Wake up is already recorded at ${timeLabel(existingWake.timestamp)}. Replace it with the current time?`
-        );
-
-        if (!replace) return;
-
         entries = entries.filter(entry => entry.id !== existingWake.id);
       }
+    }
 
-      quickAdd("wake");
+    function saveWakeUpNow() {
+      removeExistingWakeUp();
+
+      entries.push({
+        id: crypto.randomUUID(),
+        type: "wake",
+        details: "",
+        timestamp: new Date().toISOString()
+      });
+
+      save();
+      render();
+      closeModal();
+    }
+
+    function saveWakeUpManual() {
+      const timeInput = document.getElementById("wakeTimeInput").value;
+
+      if (!timeInput) return;
+
+      removeExistingWakeUp();
+
+      const today = new Date();
+      const [hours, minutes] = timeInput.split(":");
+
+      today.setHours(Number(hours));
+      today.setMinutes(Number(minutes));
+      today.setSeconds(0);
+      today.setMilliseconds(0);
+
+      entries.push({
+        id: crypto.randomUUID(),
+        type: "wake",
+        details: "Manually entered",
+        timestamp: today.toISOString()
+      });
+
+      save();
+      render();
+      closeModal();
     }
 
     function deleteEntry(id) {
@@ -873,14 +819,10 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
     function openModal(type) {
       currentModal = type;
 
-      const title = document.getElementById("modalTitle");
-      const content = document.getElementById("modalContent");
-
       const modalData = getModalData(type);
 
-      title.textContent = modalData.title;
-      content.innerHTML = modalData.html;
-
+      document.getElementById("modalTitle").textContent = modalData.title;
+      document.getElementById("modalContent").innerHTML = modalData.html;
       document.getElementById("modalBackdrop").classList.add("show");
       document.getElementById("sidebar").classList.remove("open");
     }
@@ -903,6 +845,26 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
         today: {
           title: "Today",
           html: `<p>The main dashboard shows today’s summary, quick log buttons, and automatic timeline.</p>`
+        },
+
+        wake: {
+          title: "Record Wake Up",
+          html: `
+            <p style="color:var(--muted);">
+              Record wake-up time using the current time, or enter the actual time if you forgot to log it earlier.
+            </p>
+
+            <div class="quick-buttons">
+              <button onclick="saveWakeUpNow()">☀️ Use Current Time</button>
+            </div>
+
+            <label for="wakeTimeInput">Wake Up Time</label>
+            <input id="wakeTimeInput" type="time" />
+
+            <button class="primary-btn" style="margin-top:14px;" onclick="saveWakeUpManual()">
+              Save Wake Up Time
+            </button>
+          `
         },
 
         quick: {
@@ -929,7 +891,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
               <div class="quick-group">
                 <h3>☀️ Daily Notes</h3>
                 <div class="quick-buttons">
-                  <button onclick="addWakeUp()">☀️ Wake Up</button>
+                  <button onclick="openModal('wake')">☀️ Wake Up</button>
                   <button onclick="openModal('notes')">📝 Note</button>
                 </div>
               </div>
@@ -974,6 +936,11 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
         food: {
           title: "Add Food",
           html: foodFormHTML()
+        },
+
+        foodFavorites: {
+          title: "Edit Favorite Foods",
+          html: foodFavoritesHTML()
         },
 
         activity: {
@@ -1044,36 +1011,20 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       const wake = firstToday("wake");
       const waterCount = countToday("water");
       const waterPercent = Math.min((waterCount / 3) * 100, 100);
-
       const feedItems = feedingEntries();
 
       return `
         <div class="mini-summary-grid">
-          <div class="mini-card">
-            <strong>${wake ? timeLabel(wake.timestamp) : "—"}</strong>
-            <span>Wake Up</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${countToday("shake")}</strong>
-            <span>Shakes</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${waterCount} / 3</strong>
-            <span>Water Cups</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${countToday("food")}</strong>
-            <span>Foods Logged</span>
-          </div>
+          <div class="mini-card"><strong>${wake ? timeLabel(wake.timestamp) : "—"}</strong><span>Wake Up</span></div>
+          <div class="mini-card"><strong>${countToday("shake")}</strong><span>Shakes</span></div>
+          <div class="mini-card"><strong>${waterCount} / 3</strong><span>Water Cups</span></div>
+          <div class="mini-card"><strong>${countToday("food")}</strong><span>Foods Logged</span></div>
         </div>
 
         <div class="section" style="box-shadow:none;">
           <h2>Quick Add</h2>
           <div class="quick-buttons">
-            <button onclick="addWakeUp()">☀️ Wake Up</button>
+            <button onclick="openModal('wake')">☀️ Wake Up</button>
             <button onclick="quickAdd('shake')">🍼 Add Shake</button>
             <button onclick="quickAdd('water', '8 oz / 1 cup')">💧 Add Water</button>
             <button onclick="openModal('food')">🍎 Add Food</button>
@@ -1150,6 +1101,47 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       openModal("feeding");
     }
 
+    function foodFavoritesHTML() {
+      return `
+        <label for="newFavoriteInput">Add Favorite Food</label>
+        <input id="newFavoriteInput" placeholder="Example: Scrambled eggs" />
+
+        <button class="primary-btn" style="margin-top:12px;" onclick="addFoodFavorite()">Add Favorite</button>
+
+        <div class="favorite-list">
+          ${
+            foodFavorites.length
+              ? foodFavorites.map((food, index) => `
+                  <div class="favorite-row">
+                    <strong>${food}</strong>
+                    <button class="delete-btn" onclick="deleteFoodFavorite(${index})">×</button>
+                  </div>
+                `).join("")
+              : `<div class="empty">No favorite foods yet.</div>`
+          }
+        </div>
+
+        <button class="pill-btn" style="margin-top:16px;" onclick="openModal('food')">Back to Food Entry</button>
+      `;
+    }
+
+    function addFoodFavorite() {
+      const input = document.getElementById("newFavoriteInput");
+      const value = input.value.trim();
+
+      if (!value) return;
+
+      foodFavorites.push(value);
+      saveFavorites();
+      openModal("foodFavorites");
+    }
+
+    function deleteFoodFavorite(index) {
+      foodFavorites.splice(index, 1);
+      saveFavorites();
+      openModal("foodFavorites");
+    }
+
     function noteFormHTML() {
       return `
         <label for="noteInput">Concern or Note</label>
@@ -1223,65 +1215,9 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
     }
 
     function escapeJS(str) {
-      return String(str).replace(/'/g, "\\'");
-    }
-
-    function getModalDataExtended(type) {
-      return null;
-    }
-
-    const originalGetModalData = getModalData;
-
-    getModalData = function(type) {
-      if (type === "foodFavorites") {
-        return {
-          title: "Edit Favorite Foods",
-          html: foodFavoritesHTML()
-        };
-      }
-
-      return originalGetModalData(type);
-    };
-
-    function foodFavoritesHTML() {
-      return `
-        <label for="newFavoriteInput">Add Favorite Food</label>
-        <input id="newFavoriteInput" placeholder="Example: Scrambled eggs" />
-
-        <button class="primary-btn" style="margin-top:12px;" onclick="addFoodFavorite()">Add Favorite</button>
-
-        <div class="favorite-list">
-          ${
-            foodFavorites.length
-              ? foodFavorites.map((food, index) => `
-                  <div class="favorite-row">
-                    <strong>${food}</strong>
-                    <button class="delete-btn" onclick="deleteFoodFavorite(${index})">×</button>
-                  </div>
-                `).join("")
-              : `<div class="empty">No favorite foods yet.</div>`
-          }
-        </div>
-
-        <button class="pill-btn" style="margin-top:16px;" onclick="openModal('food')">Back to Food Entry</button>
-      `;
-    }
-
-    function addFoodFavorite() {
-      const input = document.getElementById("newFavoriteInput");
-      const value = input.value.trim();
-
-      if (!value) return;
-
-      foodFavorites.push(value);
-      saveFavorites();
-      openModal("foodFavorites");
-    }
-
-    function deleteFoodFavorite(index) {
-      foodFavorites.splice(index, 1);
-      saveFavorites();
-      openModal("foodFavorites");
+      return String(str)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'");
     }
 
     render();

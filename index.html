@@ -1,11 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.8.4
+Version: 0.8.5
 Date: June 16, 2026
 Changes:
-- Added Care Routines for Miralax and Enemas
-- Added dashboard cards for Miralax daily goal and Enema weekly goal
-- Updated quick-add button labels to use + before the action name
+- Replaced enema icon with clearer medical icon and labels
+- Added Miralax and Enema to home Quick Log
+- Added Teeth, Nails, and Lotion to home Quick Log
+- Added Lotion to Hygiene module and timeline
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
@@ -13,7 +14,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.3 supplies custom purchase upgrade
+Previous Version: v0.8.4 Care Routines
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -160,7 +161,7 @@ body {
 
 .quick-log {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
 
@@ -682,7 +683,7 @@ textarea {
           </div>
 
           <div class="summary-card routine-summary-card" id="enemaCard">
-            <span class="icon">🧴</span>
+            <span class="icon">⚕️</span>
             <strong id="enemaCount">0 / 2 wk</strong>
             <span id="enemaDays">None</span>
           </div>
@@ -724,6 +725,23 @@ textarea {
           </div>
 
           <div class="quick-group">
+            <h3>🥤 Care Routines</h3>
+            <div class="quick-buttons">
+              <button onclick="recordMiralax()">🥤 + Miralax</button>
+              <button onclick="recordEnema()">⚕️ + Enema</button>
+            </div>
+          </div>
+
+          <div class="quick-group">
+            <h3>🪥 Hygiene</h3>
+            <div class="quick-buttons">
+              <button onclick="quickAdd('teeth_morning')">🪥 + Teeth</button>
+              <button onclick="quickAdd('nails')">✂️ + Nails</button>
+              <button onclick="quickAdd('lotion')">🧴 + Lotion</button>
+            </div>
+          </div>
+
+          <div class="quick-group">
             <h3>☀️ Daily Notes</h3>
             <div class="quick-buttons">
               <button onclick="openModal('wake')">☀️ + Wake Up</button>
@@ -752,6 +770,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.4" defer></script>
+    <script src="./app.js?v=0.8.5" defer></script>
 </body>
 </html>

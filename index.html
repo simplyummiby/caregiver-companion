@@ -1,11 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.8.7
+Version: 0.8.8
 Date: June 16, 2026
 Changes:
-- Improved dashboard labels for weekly Enema and Laundry cards
-- Laundry card now displays weekly count in a clearer weekly format
-- Enema card now shows Enema label consistently instead of only days/none
+- Switched to permanent localStorage keys so data survives new app versions
+- Added migration from older versioned storage keys
+- Added JSON backup export and import in Settings
+- Added local-only storage warning
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
@@ -13,7 +14,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.6 Laundry Tracking
+Previous Version: v0.8.7 weekly dashboard label cleanup
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -811,6 +812,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.7" defer></script>
+    <script src="./app.js?v=0.8.8" defer></script>
 </body>
 </html>

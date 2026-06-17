@@ -325,7 +325,7 @@ function laundryAveragePerWeek() {
 }
 
 function laundryBreakdown(entriesToCount) {
-  const types = ["Clothing / Jumpers", "Bed Pads", "Mattress Pads", "Mixed Load", "Other"];
+  const types = ["Clothing / Jumpers", "Bed Pads", "Mattress Pads", "Blankets", "Mixed Load", "Other"];
 
   return types.map(type => {
     return {
@@ -746,6 +746,7 @@ function getModalData(type) {
               <button onclick="recordLaundry('Clothing / Jumpers')">🧺 + Clothing</button>
               <button onclick="recordLaundry('Bed Pads')">🛏️ + Bed Pads</button>
               <button onclick="recordLaundry('Mattress Pads')">🛌 + Mattress Pads</button>
+              <button onclick="recordLaundry('Blankets')">🧸 + Blankets</button>
               <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
               <button onclick="recordLaundry('Other')">📦 + Other</button>
             </div>
@@ -791,6 +792,12 @@ function getModalData(type) {
       html: `
         <p><strong>Data Storage:</strong> This version saves only on this device using localStorage.</p>
         <p class="warning-text">Local-only warning: until login/sync is added, data is saved only in this browser on this device.</p>
+
+        <div class="section" style="box-shadow:none;">
+          <h2>Storage Check</h2>
+          <p>${localStorageStatusMessage()}</p>
+          <p>${savedDataSummary()}</p>
+        </div>
 
         <div class="quick-buttons">
           <button onclick="exportBackup()">⬇️ Export Backup</button>
@@ -1588,6 +1595,7 @@ function hygieneHTML() {
         <button onclick="recordLaundry('Clothing / Jumpers')">🧺 + Clothing</button>
         <button onclick="recordLaundry('Bed Pads')">🛏️ + Bed Pads</button>
         <button onclick="recordLaundry('Mattress Pads')">🛌 + Mattress Pads</button>
+        <button onclick="recordLaundry('Blankets')">🧸 + Blankets</button>
         <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
         <button onclick="recordLaundry('Other')">📦 + Other</button>
       </div>
@@ -1806,6 +1814,29 @@ function saveNote() {
   if (mood) quickAdd("mood", mood);
 
   closeModal();
+}
+
+
+
+function localStorageStatusMessage() {
+  try {
+    const testKey = "caregiverCompanion_storage_test";
+    localStorage.setItem(testKey, "ok");
+    localStorage.removeItem(testKey);
+
+    return "Storage available in this browser.";
+  } catch {
+    return "Storage may be blocked in this browser or preview window.";
+  }
+}
+
+function savedDataSummary() {
+  return `
+    Entries: ${entries.length}<br>
+    Supplies: ${supplies.length}<br>
+    Purchases: ${purchases.length}<br>
+    Wishlist: ${wishlist.length}
+  `;
 }
 
 

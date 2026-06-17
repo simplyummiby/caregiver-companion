@@ -1,5 +1,5 @@
-const STORAGE_KEY = "caregiverCompanion_v07";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v07";
+const STORAGE_KEY = "caregiverCompanion_v071";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v071";
 
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -316,17 +316,37 @@ function nextMedicationDue() {
   return meds.find(entry => entry.dueDate >= now) || meds[meds.length - 1] || null;
 }
 
-function nextMedDisplay() {
+function nextMedDashboardData() {
   const med = nextMedicationDue();
 
-  if (!med) return "—";
+  if (!med) {
+    return {
+      status: "—",
+      details: "Next Med",
+      cardClass: ""
+    };
+  }
 
   const dueDate = new Date(med.nextDue);
   const now = new Date();
+  const minutesUntilDue = Math.round((dueDate - now) / 60000);
 
-  if (dueDate < now) return "Due";
+  let status = "Next Med";
+  let cardClass = "";
 
-  return timeLabel(med.nextDue);
+  if (minutesUntilDue < 0) {
+    status = "Overdue";
+    cardClass = "med-overdue";
+  } else if (minutesUntilDue <= 30) {
+    status = "Due Soon";
+    cardClass = "med-due-soon";
+  }
+
+  return {
+    status,
+    details: `${med.medName || "Medication"}${med.dose ? "<br>" + med.dose : ""}<br>Due ${timeLabel(med.nextDue)}`,
+    cardClass
+  };
 }
 
 function renderSummary() {
@@ -341,7 +361,18 @@ function renderSummary() {
 
   const latestTemp = latestToday("temperature");
   document.getElementById("latestTemp").textContent = latestTemp ? latestTemp.temperature + "°" : "—";
-  document.getElementById("nextMed").textContent = nextMedDisplay();
+
+  const medDashboard = nextMedDashboardData();
+  const nextMedCard = document.getElementById("nextMedCard");
+
+  document.getElementById("nextMedStatus").textContent = medDashboard.status;
+  document.getElementById("nextMedDetails").innerHTML = medDashboard.details;
+
+  nextMedCard.classList.remove("med-due-soon", "med-overdue");
+
+  if (medDashboard.cardClass) {
+    nextMedCard.classList.add(medDashboard.cardClass);
+  }
 
   const mood = latestToday("mood");
   document.getElementById("moodDisplay").textContent = mood ? mood.details : "Not set";

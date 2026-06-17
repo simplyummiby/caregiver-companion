@@ -1,12 +1,15 @@
 <!--
 Caregiver Companion
-Version: 0.3
+Version: 0.4
 Date: June 16, 2026
 Changes:
-- Added manual Wake Up time modal
-- Wake Up can now be recorded as current time or entered manually
-- Quick Log stays focused: Shake, Water, Food, Pee, Poopy, Wake Up, Note
-Previous Version: v0.2 Feeding & Hydration
+- Built full Diapers module
+- Added diaper summary cards
+- Added last pee / last poopy display
+- Added manual diaper time entry
+- Added optional diaper notes
+- Added filtered diaper timeline
+Previous Version: v0.3 Wake Up time entry
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -24,7 +27,6 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       --card: #ffffff;
       --primary: #5b35b1;
       --primary-dark: #21114d;
-      --accent: #8ed8d0;
       --soft-purple: #eee7ff;
       --soft-green: #eaf8ef;
       --text: #1e1633;
@@ -319,15 +321,16 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       resize: vertical;
     }
 
-    .form-row,
-    .mini-summary-grid {
+    .form-row {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 14px;
     }
 
     .mini-summary-grid {
+      display: grid;
       grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
       margin-bottom: 16px;
     }
 
@@ -556,8 +559,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
   </div>
 
   <script>
-    const STORAGE_KEY = "caregiverCompanion_v03";
-    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v03";
+    const STORAGE_KEY = "caregiverCompanion_v04";
+    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v04";
 
     let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -670,6 +673,12 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       return todayEntries().find(entry => entry.type === type);
     }
 
+    function diaperEntries() {
+      return todayEntries().filter(entry =>
+        ["pee", "poopy"].includes(entry.type)
+      );
+    }
+
     function feedingEntries() {
       return todayEntries().filter(entry =>
         ["wake", "shake", "water", "food"].includes(entry.type)
@@ -691,6 +700,37 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       if (document.getElementById("modalBackdrop").classList.contains("show")) {
         refreshOpenModal();
       }
+    }
+
+    function quickAddDiaper(type) {
+      quickAdd(type);
+    }
+
+    function saveManualDiaper() {
+      const diaperType = document.getElementById("diaperTypeInput").value;
+      const timeInput = document.getElementById("diaperTimeInput").value;
+      const notes = document.getElementById("diaperNotesInput").value.trim();
+
+      if (!diaperType || !timeInput) return;
+
+      const today = new Date();
+      const [hours, minutes] = timeInput.split(":");
+
+      today.setHours(Number(hours));
+      today.setMinutes(Number(minutes));
+      today.setSeconds(0);
+      today.setMilliseconds(0);
+
+      entries.push({
+        id: crypto.randomUUID(),
+        type: diaperType,
+        details: notes,
+        timestamp: today.toISOString()
+      });
+
+      save();
+      render();
+      openModal("diapers");
     }
 
     function removeExistingWakeUp() {
@@ -883,8 +923,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
               <div class="quick-group">
                 <h3>💩 Diapers</h3>
                 <div class="quick-buttons">
-                  <button onclick="quickAdd('pee')">💦 Pee</button>
-                  <button onclick="quickAdd('poopy')">💩 Poopy</button>
+                  <button onclick="quickAddDiaper('pee')">💦 Pee</button>
+                  <button onclick="quickAddDiaper('poopy')">💩 Poopy</button>
                 </div>
               </div>
 
@@ -906,17 +946,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
 
         diapers: {
           title: "Diapers",
-          html: `
-            <div class="mini-summary-grid">
-              <div class="mini-card"><strong>${countToday("pee")}</strong><span>Pee Diapers</span></div>
-              <div class="mini-card"><strong>${countToday("poopy")}</strong><span>Poopy Diapers</span></div>
-            </div>
-
-            <div class="quick-buttons">
-              <button onclick="quickAdd('pee')">💦 Add Pee</button>
-              <button onclick="quickAdd('poopy')">💩 Add Poopy</button>
-            </div>
-          `
+          html: diapersHTML()
         },
 
         hygiene: {
@@ -1005,6 +1035,83 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       };
 
       return modals[type];
+    }
+
+    function diapersHTML() {
+      const peeCount = countToday("pee");
+      const poopyCount = countToday("poopy");
+      const lastPee = latestToday("pee");
+      const lastPoopy = latestToday("poopy");
+      const items = diaperEntries();
+
+      return `
+        <div class="mini-summary-grid">
+          <div class="mini-card">
+            <strong>${peeCount}</strong>
+            <span>Pee Diapers</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${poopyCount}</strong>
+            <span>Poopy Diapers</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${lastPee ? timeLabel(lastPee.timestamp) : "—"}</strong>
+            <span>Last Pee</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${lastPoopy ? timeLabel(lastPoopy.timestamp) : "—"}</strong>
+            <span>Last Poopy</span>
+          </div>
+        </div>
+
+        <div class="section" style="box-shadow:none;">
+          <h2>Quick Add</h2>
+          <div class="quick-buttons">
+            <button onclick="quickAddDiaper('pee')">💦 Add Pee</button>
+            <button onclick="quickAddDiaper('poopy')">💩 Add Poopy</button>
+          </div>
+        </div>
+
+        <div class="section" style="box-shadow:none;">
+          <h2>Manual Diaper Entry</h2>
+
+          <div class="form-row">
+            <div>
+              <label for="diaperTypeInput">Type</label>
+              <select id="diaperTypeInput">
+                <option value="pee">Pee</option>
+                <option value="poopy">Poopy</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="diaperTimeInput">Time</label>
+              <input id="diaperTimeInput" type="time" />
+            </div>
+          </div>
+
+          <label for="diaperNotesInput">Notes</label>
+          <textarea id="diaperNotesInput" placeholder="Optional notes..."></textarea>
+
+          <button class="primary-btn" style="margin-top:14px;" onclick="saveManualDiaper()">
+            Save Diaper Entry
+          </button>
+        </div>
+
+        <div class="section" style="box-shadow:none; margin-bottom:0;">
+          <h2>Diaper Timeline</h2>
+          <div class="timeline">
+            ${
+              items.length
+                ? items.map(entry => timelineItemHTML(entry)).join("")
+                : `<div class="empty">No diaper entries yet today.</div>`
+            }
+          </div>
+        </div>
+      `;
     }
 
     function feedingHydrationHTML() {

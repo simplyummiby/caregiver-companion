@@ -1,9 +1,9 @@
-const STORAGE_KEY = "caregiverCompanion_v084";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v084";
+const STORAGE_KEY = "caregiverCompanion_v085";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v085";
 
-const SUPPLIES_KEY = "caregiverCompanion_supplies_v084";
-const PURCHASES_KEY = "caregiverCompanion_purchases_v084";
-const WISHLIST_KEY = "caregiverCompanion_wishlist_v084";
+const SUPPLIES_KEY = "caregiverCompanion_supplies_v085";
+const PURCHASES_KEY = "caregiverCompanion_purchases_v085";
+const WISHLIST_KEY = "caregiverCompanion_wishlist_v085";
 
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -50,7 +50,8 @@ const icons = {
   temperature: "🌡",
   health: "🤒",
   miralax: "🥤",
-  enema: "🧴",
+  enema: "⚕️",
+  lotion: "🧴",
   note: "📝",
   mood: "😊"
 };
@@ -76,6 +77,7 @@ const labels = {
   health: "Health Log",
   miralax: "Miralax",
   enema: "Enema",
+  lotion: "Lotion",
   note: "Note",
   mood: "Mood"
 };
@@ -187,7 +189,7 @@ function feedingEntries() {
 
 function hygieneEntries() {
   return todayEntries().filter(entry =>
-    ["teeth_morning", "teeth_evening", "full_bath", "sponge_bath", "nails", "haircut"].includes(entry.type)
+    ["teeth_morning", "teeth_evening", "full_bath", "sponge_bath", "nails", "haircut", "lotion"].includes(entry.type)
   );
 }
 
@@ -317,7 +319,7 @@ function recordMiralax() {
 }
 
 function recordEnema() {
-  const notes = prompt("Optional enema note:");
+  const notes = prompt("Optional Enema note:");
 
   quickAdd("enema", notes ? notes.trim() : "");
 }
@@ -599,6 +601,23 @@ function getModalData(type) {
             </div>
           </div>
           <div class="quick-group">
+            <h3>🥤 Care Routines</h3>
+            <div class="quick-buttons">
+              <button onclick="recordMiralax()">🥤 + Miralax</button>
+              <button onclick="recordEnema()">⚕️ + Enema</button>
+            </div>
+          </div>
+
+          <div class="quick-group">
+            <h3>🪥 Hygiene</h3>
+            <div class="quick-buttons">
+              <button onclick="quickAdd('teeth_morning')">🪥 + Teeth</button>
+              <button onclick="quickAdd('nails')">✂️ + Nails</button>
+              <button onclick="quickAdd('lotion')">🧴 + Lotion</button>
+            </div>
+          </div>
+
+          <div class="quick-group">
             <h3>☀️ Daily Notes</h3>
             <div class="quick-buttons">
               <button onclick="openModal('wake')">☀️ + Wake Up</button>
@@ -671,7 +690,7 @@ function healthHTML() {
 
       <div class="quick-buttons">
         <button onclick="recordMiralax()">🥤 + Miralax</button>
-        <button onclick="recordEnema()">🧴 + Enema</button>
+        <button onclick="recordEnema()">⚕️ + Enema</button>
       </div>
 
       <label for="enemaTimeInput">Manual Enema Time</label>
@@ -1388,6 +1407,7 @@ function hygieneHTML() {
   const bath = hasToday("full_bath") ? "Full" : hasToday("sponge_bath") ? "Sponge" : "No";
   const lastNails = latestEver("nails");
   const lastHaircut = latestEver("haircut");
+  const lastLotion = latestEver("lotion");
   const items = hygieneEntries();
 
   return `
@@ -1396,6 +1416,7 @@ function hygieneHTML() {
       <div class="mini-card"><strong>${bath}</strong><span>Bath Today</span></div>
       <div class="mini-card"><strong>${lastNails ? dateShort(lastNails.timestamp) : "—"}</strong><span>Last Nails</span></div>
       <div class="mini-card"><strong>${lastHaircut ? dateShort(lastHaircut.timestamp) : "—"}</strong><span>Last Haircut</span></div>
+      <div class="mini-card"><strong>${lastLotion ? dateShort(lastLotion.timestamp) : "—"}</strong><span>Last Lotion</span></div>
     </div>
     <div class="section" style="box-shadow:none;">
       <h2>Quick Add</h2>
@@ -1405,6 +1426,7 @@ function hygieneHTML() {
         <button onclick="quickAdd('full_bath')">🚿 + Full Bath</button>
         <button onclick="quickAdd('sponge_bath')">🛁 + Sponge Bath</button>
         <button onclick="quickAdd('nails')">✂️ + Nails Clipped</button>
+        <button onclick="quickAdd('lotion')">🧴 + Lotion</button>
         <button onclick="quickAdd('haircut')">💇 + Hair Cut</button>
       </div>
     </div>

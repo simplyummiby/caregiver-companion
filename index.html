@@ -1,12 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.8.11
+Version: 0.8.12
 Date: June 16, 2026
 Changes:
-- Fixed persistent storage bug by restoring permanent localStorage keys in app.js
-- Added forced migration from versioned storage keys into stable keys
-- Kept manual entry and timeline editing
-- Kept Blankets as a top-level laundry category
+- Simplified teeth tracking from Morning/Evening Teeth to one general Teeth entry
+- Updated quick log, manual entry, hygiene timeline, and dashboard teeth count
+- Added migration support so older teeth_morning and teeth_evening entries still count
+- Kept permanent localStorage keys
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
@@ -14,7 +14,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.10 manual entry and timeline editing
+Previous Version: v0.8.11 persistent storage key fix
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -779,7 +779,7 @@ textarea {
           <div class="quick-group">
             <h3>🪥 Hygiene</h3>
             <div class="quick-buttons">
-              <button onclick="quickAdd('teeth_morning')">🪥 + Teeth</button>
+              <button onclick="quickAdd('teeth')">🪥 + Teeth</button>
               <button onclick="quickAdd('nails')">✂️ + Nails</button>
               <button onclick="quickAdd('lotion')">🧴 + Lotion</button>
             </div>
@@ -827,6 +827,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.11" defer></script>
+    <script src="./app.js?v=0.8.12" defer></script>
 </body>
 </html>

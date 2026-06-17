@@ -1,12 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.8.5
+Version: 0.8.6
 Date: June 16, 2026
 Changes:
-- Replaced enema icon with clearer medical icon and labels
-- Added Miralax and Enema to home Quick Log
-- Added Teeth, Nails, and Lotion to home Quick Log
-- Added Lotion to Hygiene module and timeline
+- Added laundry tracking under Hygiene & Care Tasks
+- Added laundry dashboard card with weekly load count
+- Added laundry quick log buttons by load type
+- Added weekly/monthly/average laundry summaries
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
@@ -14,7 +14,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.4 Care Routines
+Previous Version: v0.8.5 home quick logs for routines and hygiene
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -625,6 +625,31 @@ textarea {
   border-color: #e08b8b;
 }
 
+  
+/* Laundry tracking */
+.laundry-summary-card strong {
+  font-size: 1rem;
+}
+
+.laundry-breakdown {
+  display: grid;
+  gap: 8px;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+}
+
+.breakdown-row strong {
+  color: var(--primary-dark);
+}
+
   </style>
 </head>
 
@@ -637,7 +662,7 @@ textarea {
         <button class="active" onclick="openModal('today')">🏠 Today</button>
         <button onclick="openModal('feeding')">🍼 Feeding & Hydration</button>
         <button onclick="openModal('diapers')">💩 Diapers</button>
-        <button onclick="openModal('hygiene')">🪥 Hygiene</button>
+        <button onclick="openModal('hygiene')">🪥 Hygiene & Care</button>
         <button onclick="openModal('food')">🍎 Food Log</button>
         <button onclick="openModal('activity')">🚶 Activity & Positioning</button>
         <button onclick="openModal('health')">🌡 Health & Meds</button>
@@ -686,6 +711,12 @@ textarea {
             <span class="icon">⚕️</span>
             <strong id="enemaCount">0 / 2 wk</strong>
             <span id="enemaDays">None</span>
+          </div>
+
+          <div class="summary-card laundry-summary-card" id="laundryCard">
+            <span class="icon">🧺</span>
+            <strong id="laundryCount">0</strong>
+            <span>this wk</span>
           </div>
 
           <div class="summary-card"><span class="icon">🌡</span><strong id="latestTemp">—</strong><span>Temp</span></div>
@@ -742,6 +773,17 @@ textarea {
           </div>
 
           <div class="quick-group">
+            <h3>🧺 Laundry</h3>
+            <div class="quick-buttons">
+              <button onclick="recordLaundry('Clothing / Jumpers')">🧺 + Clothing</button>
+              <button onclick="recordLaundry('Bed Pads')">🛏️ + Bed Pads</button>
+              <button onclick="recordLaundry('Mattress Pads')">🛌 + Mattress Pads</button>
+              <button onclick="recordLaundry('Mixed Load')">🔀 + Mixed Load</button>
+              <button onclick="recordLaundry('Other')">📦 + Other</button>
+            </div>
+          </div>
+
+          <div class="quick-group">
             <h3>☀️ Daily Notes</h3>
             <div class="quick-buttons">
               <button onclick="openModal('wake')">☀️ + Wake Up</button>
@@ -770,6 +812,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.5" defer></script>
+    <script src="./app.js?v=0.8.6" defer></script>
 </body>
 </html>

@@ -1,10 +1,68 @@
-const STORAGE_KEY = "caregiverCompanion_v087";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v087";
+const STORAGE_KEY = "caregiverCompanion_entries";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites";
+const SUPPLIES_KEY = "caregiverCompanion_supplies";
+const PURCHASES_KEY = "caregiverCompanion_purchases";
+const WISHLIST_KEY = "caregiverCompanion_wishlist";
+const SETTINGS_KEY = "caregiverCompanion_settings";
+const BACKUP_VERSION = "0.8.11";
 
-const SUPPLIES_KEY = "caregiverCompanion_supplies_v087";
-const PURCHASES_KEY = "caregiverCompanion_purchases_v087";
-const WISHLIST_KEY = "caregiverCompanion_wishlist_v087";
-
+const LEGACY_KEYS = {
+  entries: [
+    "caregiverCompanion_v01",
+    "caregiverCompanion_v02",
+    "caregiverCompanion_v03",
+    "caregiverCompanion_v04",
+    "caregiverCompanion_v05",
+    "caregiverCompanion_v06",
+    "caregiverCompanion_v07",
+    "caregiverCompanion_v071",
+    "caregiverCompanion_v08",
+    "caregiverCompanion_v083",
+    "caregiverCompanion_v084",
+    "caregiverCompanion_v085",
+    "caregiverCompanion_v086",
+    "caregiverCompanion_v087"
+  ],
+  favorites: [
+    "caregiverCompanion_foodFavorites_v02",
+    "caregiverCompanion_foodFavorites_v03",
+    "caregiverCompanion_foodFavorites_v04",
+    "caregiverCompanion_foodFavorites_v05",
+    "caregiverCompanion_foodFavorites_v06",
+    "caregiverCompanion_foodFavorites_v07",
+    "caregiverCompanion_foodFavorites_v071",
+    "caregiverCompanion_foodFavorites_v08",
+    "caregiverCompanion_foodFavorites_v083",
+    "caregiverCompanion_foodFavorites_v084",
+    "caregiverCompanion_foodFavorites_v085",
+    "caregiverCompanion_foodFavorites_v086",
+    "caregiverCompanion_foodFavorites_v087"
+  ],
+  supplies: [
+    "caregiverCompanion_supplies_v08",
+    "caregiverCompanion_supplies_v083",
+    "caregiverCompanion_supplies_v084",
+    "caregiverCompanion_supplies_v085",
+    "caregiverCompanion_supplies_v086",
+    "caregiverCompanion_supplies_v087"
+  ],
+  purchases: [
+    "caregiverCompanion_purchases_v08",
+    "caregiverCompanion_purchases_v083",
+    "caregiverCompanion_purchases_v084",
+    "caregiverCompanion_purchases_v085",
+    "caregiverCompanion_purchases_v086",
+    "caregiverCompanion_purchases_v087"
+  ],
+  wishlist: [
+    "caregiverCompanion_wishlist_v08",
+    "caregiverCompanion_wishlist_v083",
+    "caregiverCompanion_wishlist_v084",
+    "caregiverCompanion_wishlist_v085",
+    "caregiverCompanion_wishlist_v086",
+    "caregiverCompanion_wishlist_v087"
+  ]
+};
 
 function safeJSONParse(value, fallback = null) {
   try {
@@ -14,76 +72,72 @@ function safeJSONParse(value, fallback = null) {
   }
 }
 
-function getBestLegacyArray(keys) {
-  let best = [];
+function mergeArraysByIdentity(arrays) {
+  const merged = [];
+  const seen = new Set();
 
-  keys.forEach(key => {
-    const parsed = safeJSONParse(localStorage.getItem(key), []);
+  arrays.flat().forEach(item => {
+    if (item === null || item === undefined) return;
 
-    if (Array.isArray(parsed) && parsed.length > best.length) {
-      best = parsed;
-    }
+    const key = typeof item === "object" && item.id
+      ? item.id
+      : JSON.stringify(item);
+
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    merged.push(item);
   });
 
-  return best;
+  return merged;
 }
 
-function migrateLegacyStorage() {
-  const settings = safeJSONParse(localStorage.getItem(SETTINGS_KEY), {});
-  if (settings.legacyMigrated) return;
+function loadArrayFromStorage(stableKey, legacyKeys, fallback = []) {
+  const arrays = [];
 
-  const migrations = [
-    { stableKey: STORAGE_KEY, legacyKeys: LEGACY_KEYS.entries },
-    { stableKey: FAVORITES_KEY, legacyKeys: LEGACY_KEYS.favorites },
-    { stableKey: SUPPLIES_KEY, legacyKeys: LEGACY_KEYS.supplies },
-    { stableKey: PURCHASES_KEY, legacyKeys: LEGACY_KEYS.purchases },
-    { stableKey: WISHLIST_KEY, legacyKeys: LEGACY_KEYS.wishlist }
-  ];
+  const stable = safeJSONParse(localStorage.getItem(stableKey), []);
+  if (Array.isArray(stable)) arrays.push(stable);
 
-  migrations.forEach(item => {
-    const current = safeJSONParse(localStorage.getItem(item.stableKey), null);
-
-    if (Array.isArray(current) && current.length) return;
-
-    const legacy = getBestLegacyArray(item.legacyKeys);
-
-    if (legacy.length) {
-      localStorage.setItem(item.stableKey, JSON.stringify(legacy));
-    }
+  legacyKeys.forEach(key => {
+    const legacy = safeJSONParse(localStorage.getItem(key), []);
+    if (Array.isArray(legacy)) arrays.push(legacy);
   });
 
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-    ...settings,
-    legacyMigrated: true,
-    migratedAt: new Date().toISOString()
-  }));
+  const merged = mergeArraysByIdentity(arrays);
+
+  if (merged.length) {
+    localStorage.setItem(stableKey, JSON.stringify(merged));
+    return merged;
+  }
+
+  localStorage.setItem(stableKey, JSON.stringify(fallback));
+  return fallback;
 }
 
+let entries = loadArrayFromStorage(STORAGE_KEY, LEGACY_KEYS.entries, []);
 
-let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-
-let supplies = JSON.parse(localStorage.getItem(SUPPLIES_KEY)) || [
+let supplies = loadArrayFromStorage(SUPPLIES_KEY, LEGACY_KEYS.supplies, [
   { id: crypto.randomUUID(), name: "Enemas", category: "Medical", brand: "", url: "", quantity: 4, lowAt: 6, notes: "" },
   { id: crypto.randomUUID(), name: "Gloves", category: "Medical", brand: "", url: "", quantity: 8, lowAt: 4, notes: "" },
   { id: crypto.randomUUID(), name: "Diapers", category: "Diapering", brand: "", url: "", quantity: 24, lowAt: 10, notes: "" },
   { id: crypto.randomUUID(), name: "Diaper Pail Refills", category: "Diapering", brand: "", url: "", quantity: 1, lowAt: 2, notes: "" },
   { id: crypto.randomUUID(), name: "Bottle Nipples", category: "Feeding", brand: "", url: "", quantity: 3, lowAt: 2, notes: "" }
-];
+]);
 
-let purchases = JSON.parse(localStorage.getItem(PURCHASES_KEY)) || [];
-let wishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY)) || [
+let purchases = loadArrayFromStorage(PURCHASES_KEY, LEGACY_KEYS.purchases, []);
+let wishlist = loadArrayFromStorage(WISHLIST_KEY, LEGACY_KEYS.wishlist, [
   { id: crypto.randomUUID(), text: "Backup thermometer", completed: false },
   { id: crypto.randomUUID(), text: "Diaper pail refills", completed: false },
   { id: crypto.randomUUID(), text: "Extra pajamas", completed: false }
-];
+]);
 
-let foodFavorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [
+let foodFavorites = loadArrayFromStorage(FAVORITES_KEY, LEGACY_KEYS.favorites, [
   "Applesauce",
   "Yogurt",
   "Oatmeal",
   "Mashed Potatoes",
   "Pudding"
-];
+]);
 
 const icons = {
   wake: "☀️",
@@ -2038,6 +2092,7 @@ function localStorageStatusMessage() {
 
 function savedDataSummary() {
   return `
+    Stable storage keys active.<br>
     Entries: ${entries.length}<br>
     Supplies: ${supplies.length}<br>
     Purchases: ${purchases.length}<br>

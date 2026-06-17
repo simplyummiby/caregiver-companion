@@ -1,9 +1,9 @@
-const STORAGE_KEY = "caregiverCompanion_v083";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v083";
+const STORAGE_KEY = "caregiverCompanion_v084";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v084";
 
-const SUPPLIES_KEY = "caregiverCompanion_supplies_v083";
-const PURCHASES_KEY = "caregiverCompanion_purchases_v083";
-const WISHLIST_KEY = "caregiverCompanion_wishlist_v083";
+const SUPPLIES_KEY = "caregiverCompanion_supplies_v084";
+const PURCHASES_KEY = "caregiverCompanion_purchases_v084";
+const WISHLIST_KEY = "caregiverCompanion_wishlist_v084";
 
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -49,6 +49,8 @@ const icons = {
   medication: "💊",
   temperature: "🌡",
   health: "🤒",
+  miralax: "🥤",
+  enema: "🧴",
   note: "📝",
   mood: "😊"
 };
@@ -72,6 +74,8 @@ const labels = {
   medication: "Medication",
   temperature: "Temperature",
   health: "Health Log",
+  miralax: "Miralax",
+  enema: "Enema",
   note: "Note",
   mood: "Mood"
 };
@@ -192,7 +196,38 @@ function activityEntries() {
 }
 
 function healthEntries() {
-  return todayEntries().filter(entry => ["temperature", "health", "medication"].includes(entry.type));
+  return todayEntries().filter(entry => ["temperature", "health", "medication", "miralax", "enema"].includes(entry.type));
+}
+
+function startOfWeek(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+
+  return d;
+}
+
+function isThisWeek(entry) {
+  const entryDate = new Date(entry.timestamp);
+  const start = startOfWeek();
+  const end = new Date(start);
+
+  end.setDate(start.getDate() + 7);
+
+  return entryDate >= start && entryDate < end;
+}
+
+function thisWeekEntries(type) {
+  return entries
+    .filter(entry => entry.type === type && isThisWeek(entry))
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+}
+
+function weekdayShort(timestamp) {
+  return new Date(timestamp).toLocaleDateString([], { weekday: "short" });
 }
 
 function activityMinutesToday() {
@@ -275,6 +310,58 @@ function saveManualActivity() {
 
   saveManualTimedEntry(activityType, timeInput, detailParts.join(" — "), { duration });
   openModal("activity");
+}
+
+function recordMiralax() {
+  quickAdd("miralax");
+}
+
+function recordEnema() {
+  const notes = prompt("Optional enema note:");
+
+  quickAdd("enema", notes ? notes.trim() : "");
+}
+
+function saveManualEnema() {
+  const timeInput = document.getElementById("enemaTimeInput").value;
+  const notes = document.getElementById("enemaNotesInput").value.trim();
+
+  if (!timeInput) return;
+
+  saveManualTimedEntry("enema", timeInput, notes);
+  openModal("health");
+}
+
+function renderRoutineDashboard() {
+  const miralaxCard = document.getElementById("miralaxCard");
+  const enemaCard = document.getElementById("enemaCard");
+
+  if (!miralaxCard || !enemaCard) return;
+
+  const miralaxToday = countToday("miralax");
+  const enemasThisWeek = thisWeekEntries("enema");
+  const enemaDayNames = [...new Set(enemasThisWeek.map(entry => weekdayShort(entry.timestamp)))];
+
+  document.getElementById("miralaxCount").textContent = `${miralaxToday} / 3`;
+  document.getElementById("enemaCount").textContent = `${enemasThisWeek.length} / 2 wk`;
+  document.getElementById("enemaDays").textContent = enemaDayNames.length ? enemaDayNames.join(", ") : "None";
+
+  miralaxCard.classList.remove("routine-good", "routine-warning", "routine-alert");
+  enemaCard.classList.remove("routine-good", "routine-warning", "routine-alert");
+
+  if (miralaxToday >= 3) {
+    miralaxCard.classList.add("routine-good");
+  } else if (miralaxToday > 0) {
+    miralaxCard.classList.add("routine-warning");
+  }
+
+  if (enemasThisWeek.length >= 2) {
+    enemaCard.classList.add("routine-good");
+  } else if (enemasThisWeek.length === 1) {
+    enemaCard.classList.add("routine-warning");
+  } else {
+    enemaCard.classList.add("routine-alert");
+  }
 }
 
 function removeExistingWakeUp() {
@@ -406,6 +493,7 @@ function renderSummary() {
   }
 
   renderSuppliesDashboard();
+  renderRoutineDashboard();
 
   const mood = latestToday("mood");
   document.getElementById("moodDisplay").textContent = mood ? mood.details : "Not set";
@@ -498,23 +586,23 @@ function getModalData(type) {
           <div class="quick-group">
             <h3>🍼 Feeding</h3>
             <div class="quick-buttons">
-              <button onclick="quickAdd('shake')">🍼 Shake</button>
-              <button onclick="quickAdd('water', '8 oz / 1 cup')">💧 Water</button>
-              <button onclick="openModal('food')">🍎 Food</button>
+              <button onclick="quickAdd('shake')">🍼 + Shake</button>
+              <button onclick="quickAdd('water', '8 oz / 1 cup')">💧 + Water</button>
+              <button onclick="openModal('food')">🍎 + Food</button>
             </div>
           </div>
           <div class="quick-group">
             <h3>💩 Diapers</h3>
             <div class="quick-buttons">
-              <button onclick="quickAdd('pee')">💦 Pee</button>
-              <button onclick="quickAdd('poopy')">💩 Poopy</button>
+              <button onclick="quickAdd('pee')">💦 + Pee</button>
+              <button onclick="quickAdd('poopy')">💩 + Poopy</button>
             </div>
           </div>
           <div class="quick-group">
             <h3>☀️ Daily Notes</h3>
             <div class="quick-buttons">
-              <button onclick="openModal('wake')">☀️ Wake Up</button>
-              <button onclick="openModal('notes')">📝 Note</button>
+              <button onclick="openModal('wake')">☀️ + Wake Up</button>
+              <button onclick="openModal('notes')">📝 + Note</button>
             </div>
           </div>
         </div>
@@ -572,6 +660,30 @@ function healthHTML() {
     </div>
 
     <div class="section" style="box-shadow:none;">
+      <h2>Care Routines</h2>
+
+      <div class="mini-summary-grid">
+        <div class="mini-card"><strong>${countToday("miralax")} / 3</strong><span>Miralax Today</span></div>
+        <div class="mini-card"><strong>${thisWeekEntries("enema").length} / 2</strong><span>Enemas This Week</span></div>
+        <div class="mini-card"><strong>${thisWeekEntries("enema").length ? [...new Set(thisWeekEntries("enema").map(entry => weekdayShort(entry.timestamp)))].join(", ") : "None"}</strong><span>Enema Days</span></div>
+        <div class="mini-card"><strong>${latestToday("miralax") ? timeLabel(latestToday("miralax").timestamp) : "—"}</strong><span>Last Miralax</span></div>
+      </div>
+
+      <div class="quick-buttons">
+        <button onclick="recordMiralax()">🥤 + Miralax</button>
+        <button onclick="recordEnema()">🧴 + Enema</button>
+      </div>
+
+      <label for="enemaTimeInput">Manual Enema Time</label>
+      <input id="enemaTimeInput" type="time" />
+
+      <label for="enemaNotesInput">Enema Notes</label>
+      <textarea id="enemaNotesInput" placeholder="Optional notes..."></textarea>
+
+      <button class="primary-btn" style="margin-top:14px;" onclick="saveManualEnema()">+ Save Manual Enema</button>
+    </div>
+
+    <div class="section" style="box-shadow:none;">
       <h2>Health Log</h2>
 
       <label for="healthStatusInput">Health Status</label>
@@ -599,7 +711,7 @@ function healthHTML() {
       <label for="healthNotesInput">Health Notes</label>
       <textarea id="healthNotesInput" placeholder="Example: Congestion worse today, sleeping more than usual..."></textarea>
 
-      <button class="primary-btn" style="margin-top:14px;" onclick="saveHealthLog()">Save Health Log</button>
+      <button class="primary-btn" style="margin-top:14px;" onclick="saveHealthLog()">+ Save Health Log</button>
     </div>
 
     <div class="section" style="box-shadow:none;">
@@ -637,7 +749,7 @@ function healthHTML() {
       <label for="medNotesInput">Medication Notes</label>
       <textarea id="medNotesInput" placeholder="Optional notes..."></textarea>
 
-      <button class="primary-btn" style="margin-top:14px;" onclick="saveMedication()">Save Medication</button>
+      <button class="primary-btn" style="margin-top:14px;" onclick="saveMedication()">+ Save Medication</button>
     </div>
 
     <div class="section" style="box-shadow:none; margin-bottom:0;">
@@ -896,11 +1008,11 @@ function suppliesHTML() {
       <label for="supplyNotesInput">Notes</label>
       <textarea id="supplyNotesInput" placeholder="Optional notes..."></textarea>
 
-      <button class="primary-btn" style="margin-top:14px;" onclick="addSupplyItem()">Add Supply</button>
+      <button class="primary-btn" style="margin-top:14px;" onclick="addSupplyItem()">+ Add Supply</button>
     </div>
 
     <div class="section" style="box-shadow:none;">
-      <h2>Record Purchase</h2>
+      <h2>+ Record Purchase</h2>
 
       <div class="form-row">
         <div>
@@ -962,7 +1074,7 @@ function suppliesHTML() {
         </div>
       </div>
 
-      <button class="primary-btn" style="margin-top:14px;" onclick="recordPurchase()">Record Purchase</button>
+      <button class="primary-btn" style="margin-top:14px;" onclick="recordPurchase()">+ Record Purchase</button>
 
       <div class="purchase-list" style="margin-top:14px;">
         ${
@@ -983,7 +1095,7 @@ function suppliesHTML() {
         </div>
 
         <div style="display:flex; align-items:end;">
-          <button class="primary-btn" onclick="addWishlistItem()">Add Wishlist Item</button>
+          <button class="primary-btn" onclick="addWishlistItem()">+ Add Wishlist Item</button>
         </div>
       </div>
 
@@ -1235,9 +1347,9 @@ function activityHTML() {
     <div class="section" style="box-shadow:none;">
       <h2>Quick Add</h2>
       <div class="quick-buttons">
-        <button onclick="quickAdd('position')">🔄 Position Change</button>
-        <button onclick="quickAdd('walk')">🚶 Walk</button>
-        <button onclick="quickAdd('exercise')">🏋️ Exercise</button>
+        <button onclick="quickAdd('position')">🔄 + Position Change</button>
+        <button onclick="quickAdd('walk')">🚶 + Walk</button>
+        <button onclick="quickAdd('exercise')">🏋️ + Exercise</button>
       </div>
     </div>
 
@@ -1261,7 +1373,7 @@ function activityHTML() {
       <input id="activityDurationInput" type="number" min="0" placeholder="Optional, example: 10" />
       <label for="activityNotesInput">Notes</label>
       <textarea id="activityNotesInput" placeholder="Optional notes..."></textarea>
-      <button class="primary-btn" style="margin-top:14px;" onclick="saveManualActivity()">Save Activity Entry</button>
+      <button class="primary-btn" style="margin-top:14px;" onclick="saveManualActivity()">+ Save Activity Entry</button>
     </div>
 
     <div class="section" style="box-shadow:none; margin-bottom:0;">
@@ -1288,12 +1400,12 @@ function hygieneHTML() {
     <div class="section" style="box-shadow:none;">
       <h2>Quick Add</h2>
       <div class="quick-buttons">
-        <button onclick="quickAdd('teeth_morning')">🪥 Morning Teeth</button>
-        <button onclick="quickAdd('teeth_evening')">🪥 Evening Teeth</button>
-        <button onclick="quickAdd('full_bath')">🚿 Full Bath</button>
-        <button onclick="quickAdd('sponge_bath')">🛁 Sponge Bath</button>
-        <button onclick="quickAdd('nails')">✂️ Nails Clipped</button>
-        <button onclick="quickAdd('haircut')">💇 Hair Cut</button>
+        <button onclick="quickAdd('teeth_morning')">🪥 + Morning Teeth</button>
+        <button onclick="quickAdd('teeth_evening')">🪥 + Evening Teeth</button>
+        <button onclick="quickAdd('full_bath')">🚿 + Full Bath</button>
+        <button onclick="quickAdd('sponge_bath')">🛁 + Sponge Bath</button>
+        <button onclick="quickAdd('nails')">✂️ + Nails Clipped</button>
+        <button onclick="quickAdd('haircut')">💇 + Hair Cut</button>
       </div>
     </div>
     <div class="section" style="box-shadow:none; margin-bottom:0;">
@@ -1320,8 +1432,8 @@ function diapersHTML() {
     <div class="section" style="box-shadow:none;">
       <h2>Quick Add</h2>
       <div class="quick-buttons">
-        <button onclick="quickAdd('pee')">💦 Add Pee</button>
-        <button onclick="quickAdd('poopy')">💩 Add Poopy</button>
+        <button onclick="quickAdd('pee')">💦 + Pee</button>
+        <button onclick="quickAdd('poopy')">💩 + Poopy</button>
       </div>
     </div>
     <div class="section" style="box-shadow:none;">
@@ -1338,7 +1450,7 @@ function diapersHTML() {
       </div>
       <label for="diaperNotesInput">Notes</label>
       <textarea id="diaperNotesInput" placeholder="Optional notes..."></textarea>
-      <button class="primary-btn" style="margin-top:14px;" onclick="saveManualDiaper()">Save Diaper Entry</button>
+      <button class="primary-btn" style="margin-top:14px;" onclick="saveManualDiaper()">+ Save Diaper Entry</button>
     </div>
     <div class="section" style="box-shadow:none; margin-bottom:0;">
       <h2>Diaper Timeline</h2>
@@ -1363,10 +1475,10 @@ function feedingHydrationHTML() {
     <div class="section" style="box-shadow:none;">
       <h2>Quick Add</h2>
       <div class="quick-buttons">
-        <button onclick="openModal('wake')">☀️ Wake Up</button>
-        <button onclick="quickAdd('shake')">🍼 Add Shake</button>
-        <button onclick="quickAdd('water', '8 oz / 1 cup')">💧 Add Water</button>
-        <button onclick="openModal('food')">🍎 Add Food</button>
+        <button onclick="openModal('wake')">☀️ + Wake Up</button>
+        <button onclick="quickAdd('shake')">🍼 + Shake</button>
+        <button onclick="quickAdd('water', '8 oz / 1 cup')">💧 + Water</button>
+        <button onclick="openModal('food')">🍎 + Food</button>
       </div>
     </div>
     <div class="section" style="box-shadow:none;">
@@ -1391,7 +1503,7 @@ function foodFormHTML() {
     </div>
     <label for="foodNotes">Notes</label>
     <textarea id="foodNotes" placeholder="Example: Ate well, refused, small amount..."></textarea>
-    <button class="primary-btn" style="margin-top:14px;" onclick="saveFood()">Save Food Entry</button>
+    <button class="primary-btn" style="margin-top:14px;" onclick="saveFood()">+ Save Food Entry</button>
     <hr style="border:none; border-top:1px solid var(--border); margin:20px 0;">
     <button class="pill-btn" onclick="openModal('foodFavorites')">⚙️ Edit Favorite Foods</button>
   `;
@@ -1425,7 +1537,7 @@ function foodFavoritesHTML() {
   return `
     <label for="newFavoriteInput">Add Favorite Food</label>
     <input id="newFavoriteInput" placeholder="Example: Scrambled eggs" />
-    <button class="primary-btn" style="margin-top:12px;" onclick="addFoodFavorite()">Add Favorite</button>
+    <button class="primary-btn" style="margin-top:12px;" onclick="addFoodFavorite()">+ Add Favorite</button>
     <div class="favorite-list">
       ${foodFavorites.length ? foodFavorites.map((food, index) => `
         <div class="favorite-row">

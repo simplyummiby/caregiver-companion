@@ -1,13 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.7
+Version: 0.7.1
 Date: June 16, 2026
 Changes:
-- Converted project to 3-file structure: index.html, styles.css, app.js
-- Built Health & Meds module
-- Added dashboard Temp and Next Med cards
-- Kept Bath inside Hygiene
-Previous Version: v0.6 Activity & Positioning
+- Upgraded dashboard medication card
+- Next Med card now shows status, medication name, dose, and due time
+- Added Due Soon and Overdue visual states
+Previous Version: v0.7 Health & Meds module
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -69,7 +68,11 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
           <div class="summary-card"><span class="icon">💦</span><strong id="peeCount">0</strong><span>Pee</span></div>
           <div class="summary-card"><span class="icon">💩</span><strong id="poopyCount">0</strong><span>Poopy</span></div>
           <div class="summary-card"><span class="icon">🌡</span><strong id="latestTemp">—</strong><span>Temp</span></div>
-          <div class="summary-card"><span class="icon">💊</span><strong id="nextMed">—</strong><span>Next Med</span></div>
+          <div class="summary-card med-summary-card" id="nextMedCard">
+            <span class="icon">💊</span>
+            <strong id="nextMedStatus">—</strong>
+            <span id="nextMedDetails">Next Med</span>
+          </div>
         </div>
       </section>
 

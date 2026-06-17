@@ -1,14 +1,14 @@
 <!--
 Caregiver Companion
-Version: 0.5
+Version: 0.6
 Date: June 16, 2026
 Changes:
-- Built full Hygiene module
-- Added teeth, bath, nails, and haircut tracking
-- Added manual hygiene time entry
-- Added last done cards for nails and haircut
-- Added filtered hygiene timeline
-Previous Version: v0.4 Diapers module
+- Built full Activity & Positioning module
+- Added position changes, walks, and exercise tracking
+- Added optional duration in minutes
+- Added manual activity time entry
+- Added activity summary cards and filtered timeline
+Previous Version: v0.5 Hygiene module
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -558,8 +558,8 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
   </div>
 
   <script>
-    const STORAGE_KEY = "caregiverCompanion_v05";
-    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v05";
+    const STORAGE_KEY = "caregiverCompanion_v06";
+    const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v06";
 
     let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
@@ -704,6 +704,18 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       );
     }
 
+    function activityEntries() {
+      return todayEntries().filter(entry =>
+        ["position", "walk", "exercise"].includes(entry.type)
+      );
+    }
+
+    function activityMinutesToday() {
+      return activityEntries().reduce((total, entry) => {
+        return total + (Number(entry.duration) || 0);
+      }, 0);
+    }
+
     function quickAdd(type, details = "", extra = {}) {
       entries.push({
         id: crypto.randomUUID(),
@@ -719,6 +731,27 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       if (document.getElementById("modalBackdrop").classList.contains("show")) {
         refreshOpenModal();
       }
+    }
+
+    function saveManualTimedEntry(type, timeInput, details = "", extra = {}) {
+      const today = new Date();
+      const [hours, minutes] = timeInput.split(":");
+
+      today.setHours(Number(hours));
+      today.setMinutes(Number(minutes));
+      today.setSeconds(0);
+      today.setMilliseconds(0);
+
+      entries.push({
+        id: crypto.randomUUID(),
+        type,
+        details,
+        timestamp: today.toISOString(),
+        ...extra
+      });
+
+      save();
+      render();
     }
 
     function saveManualDiaper() {
@@ -743,24 +776,30 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       openModal("hygiene");
     }
 
-    function saveManualTimedEntry(type, timeInput, details = "") {
-      const today = new Date();
-      const [hours, minutes] = timeInput.split(":");
+    function saveManualActivity() {
+      const activityType = document.getElementById("activityTypeInput").value;
+      const timeInput = document.getElementById("activityTimeInput").value;
+      const durationInput = document.getElementById("activityDurationInput").value;
+      const notes = document.getElementById("activityNotesInput").value.trim();
 
-      today.setHours(Number(hours));
-      today.setMinutes(Number(minutes));
-      today.setSeconds(0);
-      today.setMilliseconds(0);
+      if (!activityType || !timeInput) return;
 
-      entries.push({
-        id: crypto.randomUUID(),
-        type,
-        details,
-        timestamp: today.toISOString()
+      const duration = Number(durationInput) || 0;
+      const durationText = duration ? `${duration} min` : "";
+      const detailParts = [];
+
+      if (durationText) detailParts.push(durationText);
+      if (notes) detailParts.push(notes);
+
+      saveManualTimedEntry(activityType, timeInput, detailParts.join(" — "), {
+        duration
       });
 
-      save();
-      render();
+      openModal("activity");
+    }
+
+    function quickActivity(type) {
+      quickAdd(type);
     }
 
     function removeExistingWakeUp() {
@@ -996,13 +1035,7 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
 
         activity: {
           title: "Activity & Positioning",
-          html: `
-            <div class="quick-buttons">
-              <button onclick="quickAdd('position')">🔄 Position Change</button>
-              <button onclick="quickAdd('walk')">🚶 Walk</button>
-              <button onclick="quickAdd('exercise')">🏋️ Exercise</button>
-            </div>
-          `
+          html: activityHTML()
         },
 
         health: {
@@ -1058,6 +1091,88 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
       return modals[type];
     }
 
+    function activityHTML() {
+      const positions = countToday("position");
+      const walks = countToday("walk");
+      const exercises = countToday("exercise");
+      const minutes = activityMinutesToday();
+      const items = activityEntries();
+
+      return `
+        <div class="mini-summary-grid">
+          <div class="mini-card">
+            <strong>${positions}</strong>
+            <span>Position Changes</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${walks}</strong>
+            <span>Walks</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${exercises}</strong>
+            <span>Exercise</span>
+          </div>
+
+          <div class="mini-card">
+            <strong>${minutes}</strong>
+            <span>Activity Minutes</span>
+          </div>
+        </div>
+
+        <div class="section" style="box-shadow:none;">
+          <h2>Quick Add</h2>
+          <div class="quick-buttons">
+            <button onclick="quickActivity('position')">🔄 Position Change</button>
+            <button onclick="quickActivity('walk')">🚶 Walk</button>
+            <button onclick="quickActivity('exercise')">🏋️ Exercise</button>
+          </div>
+        </div>
+
+        <div class="section" style="box-shadow:none;">
+          <h2>Manual Activity Entry</h2>
+
+          <div class="form-row">
+            <div>
+              <label for="activityTypeInput">Type</label>
+              <select id="activityTypeInput">
+                <option value="position">Position Change</option>
+                <option value="walk">Walk</option>
+                <option value="exercise">Exercise</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="activityTimeInput">Time</label>
+              <input id="activityTimeInput" type="time" />
+            </div>
+          </div>
+
+          <label for="activityDurationInput">Duration in Minutes</label>
+          <input id="activityDurationInput" type="number" min="0" placeholder="Optional, example: 10" />
+
+          <label for="activityNotesInput">Notes</label>
+          <textarea id="activityNotesInput" placeholder="Optional notes..."></textarea>
+
+          <button class="primary-btn" style="margin-top:14px;" onclick="saveManualActivity()">
+            Save Activity Entry
+          </button>
+        </div>
+
+        <div class="section" style="box-shadow:none; margin-bottom:0;">
+          <h2>Activity Timeline</h2>
+          <div class="timeline">
+            ${
+              items.length
+                ? items.map(entry => timelineItemHTML(entry)).join("")
+                : `<div class="empty">No activity entries yet today.</div>`
+            }
+          </div>
+        </div>
+      `;
+    }
+
     function hygieneHTML() {
       const teethTotal = countToday("teeth_morning") + countToday("teeth_evening");
       const bath = hasToday("full_bath") ? "Full" : hasToday("sponge_bath") ? "Sponge" : "No";
@@ -1067,25 +1182,10 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
 
       return `
         <div class="mini-summary-grid">
-          <div class="mini-card">
-            <strong>${teethTotal} / 2</strong>
-            <span>Teeth Today</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${bath}</strong>
-            <span>Bath Today</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${lastNails ? dateShort(lastNails.timestamp) : "—"}</strong>
-            <span>Last Nails</span>
-          </div>
-
-          <div class="mini-card">
-            <strong>${lastHaircut ? dateShort(lastHaircut.timestamp) : "—"}</strong>
-            <span>Last Haircut</span>
-          </div>
+          <div class="mini-card"><strong>${teethTotal} / 2</strong><span>Teeth Today</span></div>
+          <div class="mini-card"><strong>${bath}</strong><span>Bath Today</span></div>
+          <div class="mini-card"><strong>${lastNails ? dateShort(lastNails.timestamp) : "—"}</strong><span>Last Nails</span></div>
+          <div class="mini-card"><strong>${lastHaircut ? dateShort(lastHaircut.timestamp) : "—"}</strong><span>Last Haircut</span></div>
         </div>
 
         <div class="section" style="box-shadow:none;">

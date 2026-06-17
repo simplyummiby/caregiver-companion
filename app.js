@@ -1,7 +1,26 @@
-const STORAGE_KEY = "caregiverCompanion_v071";
-const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v071";
+const STORAGE_KEY = "caregiverCompanion_v08";
+const FAVORITES_KEY = "caregiverCompanion_foodFavorites_v08";
+
+const SUPPLIES_KEY = "caregiverCompanion_supplies_v08";
+const PURCHASES_KEY = "caregiverCompanion_purchases_v08";
+const WISHLIST_KEY = "caregiverCompanion_wishlist_v08";
 
 let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+let supplies = JSON.parse(localStorage.getItem(SUPPLIES_KEY)) || [
+  { id: crypto.randomUUID(), name: "Enemas", category: "Medical", quantity: 4, lowAt: 6, notes: "" },
+  { id: crypto.randomUUID(), name: "Gloves", category: "Medical", quantity: 8, lowAt: 4, notes: "" },
+  { id: crypto.randomUUID(), name: "Diapers", category: "Diapering", quantity: 24, lowAt: 10, notes: "" },
+  { id: crypto.randomUUID(), name: "Diaper Pail Refills", category: "Diapering", quantity: 1, lowAt: 2, notes: "" },
+  { id: crypto.randomUUID(), name: "Bottle Nipples", category: "Feeding", quantity: 3, lowAt: 2, notes: "" }
+];
+
+let purchases = JSON.parse(localStorage.getItem(PURCHASES_KEY)) || [];
+let wishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY)) || [
+  { id: crypto.randomUUID(), text: "Backup thermometer", completed: false },
+  { id: crypto.randomUUID(), text: "Diaper pail refills", completed: false },
+  { id: crypto.randomUUID(), text: "Extra pajamas", completed: false }
+];
 
 let foodFavorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [
   "Applesauce",
@@ -78,6 +97,18 @@ function save() {
 
 function saveFavorites() {
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(foodFavorites));
+}
+
+function saveSupplies() {
+  localStorage.setItem(SUPPLIES_KEY, JSON.stringify(supplies));
+}
+
+function savePurchases() {
+  localStorage.setItem(PURCHASES_KEY, JSON.stringify(purchases));
+}
+
+function saveWishlist() {
+  localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist));
 }
 
 function todayKey() {
@@ -374,6 +405,8 @@ function renderSummary() {
     nextMedCard.classList.add(medDashboard.cardClass);
   }
 
+  renderSuppliesDashboard();
+
   const mood = latestToday("mood");
   document.getElementById("moodDisplay").textContent = mood ? mood.details : "Not set";
 }
@@ -500,8 +533,8 @@ function getModalData(type) {
       html: `<p>This section will track doctor, dentist, ALTCS, therapy, and next appointment notes.</p>`
     },
     supplies: {
-      title: "Supplies",
-      html: `<p>Supply inventory will go here next: enemas, diapers, gloves, bottles, nipples, clothes, and reorder reminders.</p>`
+      title: "Supplies & Inventory",
+      html: suppliesHTML()
     },
     notes: { title: "Concerns & Notes", html: noteFormHTML() },
     contacts: {
@@ -712,6 +745,379 @@ function saveMedication() {
   render();
   openModal("health");
 }
+
+
+function supplyStatus(item) {
+  const qty = Number(item.quantity) || 0;
+  const lowAt = Number(item.lowAt) || 0;
+
+  if (lowAt > 0 && qty <= Math.max(1, Math.floor(lowAt / 2))) {
+    return { label: "Critical", className: "status-critical" };
+  }
+
+  if (lowAt > 0 && qty <= lowAt) {
+    return { label: "Low", className: "status-low" };
+  }
+
+  return { label: "OK", className: "status-ok" };
+}
+
+function lowSupplies() {
+  return supplies.filter(item => {
+    const qty = Number(item.quantity) || 0;
+    const lowAt = Number(item.lowAt) || 0;
+    return lowAt > 0 && qty <= lowAt;
+  });
+}
+
+function criticalSupplies() {
+  return supplies.filter(item => {
+    const qty = Number(item.quantity) || 0;
+    const lowAt = Number(item.lowAt) || 0;
+    return lowAt > 0 && qty <= Math.max(1, Math.floor(lowAt / 2));
+  });
+}
+
+function renderSuppliesDashboard() {
+  const card = document.getElementById("suppliesCard");
+  const statusEl = document.getElementById("suppliesStatus");
+  const detailsEl = document.getElementById("suppliesDetails");
+
+  if (!card || !statusEl || !detailsEl) return;
+
+  const low = lowSupplies().length;
+  const critical = criticalSupplies().length;
+
+  card.classList.remove("supplies-low", "supplies-critical");
+
+  if (critical > 0) {
+    statusEl.textContent = `${critical} Critical`;
+    detailsEl.textContent = "Supplies";
+    card.classList.add("supplies-critical");
+  } else if (low > 0) {
+    statusEl.textContent = `${low} Low`;
+    detailsEl.textContent = "Supplies";
+    card.classList.add("supplies-low");
+  } else {
+    statusEl.textContent = "OK";
+    detailsEl.textContent = "Supplies";
+  }
+}
+
+function purchasesThisMonth() {
+  const now = new Date();
+  return purchases.filter(purchase => {
+    const date = new Date(purchase.timestamp);
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  }).length;
+}
+
+function suppliesHTML() {
+  const low = lowSupplies();
+  const activeWishlist = wishlist.filter(item => !item.completed);
+  const completedWishlist = wishlist.filter(item => item.completed);
+
+  return `
+    <div class="mini-summary-grid">
+      <div class="mini-card"><strong>${supplies.length}</strong><span>Inventory Items</span></div>
+      <div class="mini-card"><strong>${low.length}</strong><span>Running Low</span></div>
+      <div class="mini-card"><strong>${activeWishlist.length}</strong><span>Wishlist</span></div>
+      <div class="mini-card"><strong>${purchasesThisMonth()}</strong><span>Purchases This Month</span></div>
+    </div>
+
+    <div class="section" style="box-shadow:none;">
+      <h2>Attention Needed</h2>
+      <div class="supply-list">
+        ${
+          low.length
+            ? low.map(item => supplyItemHTML(item)).join("")
+            : `<div class="empty">No supplies are running low.</div>`
+        }
+      </div>
+    </div>
+
+    <div class="section" style="box-shadow:none;">
+      <h2>Inventory</h2>
+      <div class="supply-list">
+        ${
+          supplies.length
+            ? supplies.map(item => supplyItemHTML(item)).join("")
+            : `<div class="empty">No supplies added yet.</div>`
+        }
+      </div>
+    </div>
+
+    <div class="section" style="box-shadow:none;">
+      <h2>Add Supply Item</h2>
+
+      <div class="form-row">
+        <div>
+          <label for="supplyNameInput">Item Name</label>
+          <input id="supplyNameInput" placeholder="Example: Enemas" />
+        </div>
+
+        <div>
+          <label for="supplyCategoryInput">Category</label>
+          <select id="supplyCategoryInput">
+            <option>Medical</option>
+            <option>Diapering</option>
+            <option>Feeding</option>
+            <option>Clothing</option>
+            <option>Equipment</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="supplyQuantityInput">Current Quantity</label>
+          <input id="supplyQuantityInput" type="number" min="0" placeholder="Example: 4" />
+        </div>
+
+        <div>
+          <label for="supplyLowAtInput">Low Warning Quantity</label>
+          <input id="supplyLowAtInput" type="number" min="0" placeholder="Example: 6" />
+        </div>
+      </div>
+
+      <label for="supplyNotesInput">Notes</label>
+      <textarea id="supplyNotesInput" placeholder="Optional notes..."></textarea>
+
+      <button class="primary-btn" style="margin-top:14px;" onclick="addSupplyItem()">Add Supply</button>
+    </div>
+
+    <div class="section" style="box-shadow:none;">
+      <h2>Record Purchase</h2>
+
+      <div class="form-row">
+        <div>
+          <label for="purchaseItemInput">Item</label>
+          <select id="purchaseItemInput">
+            ${supplies.map(item => `<option value="${item.id}">${item.name}</option>`).join("")}
+          </select>
+        </div>
+
+        <div>
+          <label for="purchaseQtyInput">Quantity Purchased</label>
+          <input id="purchaseQtyInput" type="number" min="1" placeholder="Example: 2" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label for="purchaseStoreInput">Store</label>
+          <input id="purchaseStoreInput" placeholder="Example: Amazon" />
+        </div>
+
+        <div>
+          <label for="purchaseCostInput">Cost</label>
+          <input id="purchaseCostInput" placeholder="Example: 18.99" />
+        </div>
+      </div>
+
+      <button class="primary-btn" style="margin-top:14px;" onclick="recordPurchase()">Record Purchase</button>
+
+      <div class="purchase-list" style="margin-top:14px;">
+        ${
+          purchases.length
+            ? [...purchases].reverse().slice(0, 5).map(p => purchaseItemHTML(p)).join("")
+            : `<div class="empty">No purchases recorded yet.</div>`
+        }
+      </div>
+    </div>
+
+    <div class="section" style="box-shadow:none; margin-bottom:0;">
+      <h2>Wishlist / Need to Get</h2>
+
+      <div class="form-row">
+        <div>
+          <label for="wishlistInput">Item to Get</label>
+          <input id="wishlistInput" placeholder="Example: Backup thermometer" />
+        </div>
+
+        <div style="display:flex; align-items:end;">
+          <button class="primary-btn" onclick="addWishlistItem()">Add Wishlist Item</button>
+        </div>
+      </div>
+
+      <div class="wishlist-list" style="margin-top:14px;">
+        ${
+          wishlist.length
+            ? [...activeWishlist, ...completedWishlist].map(item => wishlistItemHTML(item)).join("")
+            : `<div class="empty">No wishlist items yet.</div>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function supplyItemHTML(item) {
+  const status = supplyStatus(item);
+
+  return `
+    <div class="supply-item">
+      <div class="supply-item-header">
+        <div>
+          <h3>${item.name}</h3>
+          <div class="supply-meta">
+            ${item.category} • Current: ${item.quantity} • Low at: ${item.lowAt || "—"}
+            ${item.notes ? `<br>${item.notes}` : ""}
+          </div>
+        </div>
+        <span class="supply-status ${status.className}">${status.label}</span>
+      </div>
+
+      <div class="qty-controls">
+        <button onclick="adjustSupplyQty('${item.id}', -1)">-1</button>
+        <button onclick="adjustSupplyQty('${item.id}', 1)">+1</button>
+        <button onclick="deleteSupplyItem('${item.id}')">Delete</button>
+      </div>
+    </div>
+  `;
+}
+
+function purchaseItemHTML(purchase) {
+  return `
+    <div class="purchase-item">
+      <strong>${purchase.itemName}</strong>
+      <div class="supply-meta">
+        ${dateShort(purchase.timestamp)} • Qty: ${purchase.quantity}
+        ${purchase.store ? ` • ${purchase.store}` : ""}
+        ${purchase.cost ? ` • $${purchase.cost}` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function wishlistItemHTML(item) {
+  return `
+    <div class="wishlist-item ${item.completed ? "completed-wishlist" : ""}">
+      <input type="checkbox" ${item.completed ? "checked" : ""} onchange="toggleWishlistItem('${item.id}')" />
+      <span>${item.text}</span>
+      <button class="delete-btn" onclick="deleteWishlistItem('${item.id}')">×</button>
+    </div>
+  `;
+}
+
+function addSupplyItem() {
+  const name = document.getElementById("supplyNameInput").value.trim();
+  const category = document.getElementById("supplyCategoryInput").value;
+  const quantity = Number(document.getElementById("supplyQuantityInput").value) || 0;
+  const lowAt = Number(document.getElementById("supplyLowAtInput").value) || 0;
+  const notes = document.getElementById("supplyNotesInput").value.trim();
+
+  if (!name) return;
+
+  supplies.push({
+    id: crypto.randomUUID(),
+    name,
+    category,
+    quantity,
+    lowAt,
+    notes
+  });
+
+  saveSupplies();
+  render();
+  openModal("supplies");
+}
+
+function adjustSupplyQty(id, amount) {
+  supplies = supplies.map(item => {
+    if (item.id !== id) return item;
+
+    return {
+      ...item,
+      quantity: Math.max(0, (Number(item.quantity) || 0) + amount)
+    };
+  });
+
+  saveSupplies();
+  render();
+  openModal("supplies");
+}
+
+function deleteSupplyItem(id) {
+  if (!confirm("Delete this supply item?")) return;
+
+  supplies = supplies.filter(item => item.id !== id);
+  saveSupplies();
+  render();
+  openModal("supplies");
+}
+
+function recordPurchase() {
+  const itemId = document.getElementById("purchaseItemInput").value;
+  const quantity = Number(document.getElementById("purchaseQtyInput").value) || 0;
+  const store = document.getElementById("purchaseStoreInput").value.trim();
+  const cost = document.getElementById("purchaseCostInput").value.trim();
+
+  if (!itemId || quantity <= 0) return;
+
+  const item = supplies.find(supply => supply.id === itemId);
+  if (!item) return;
+
+  supplies = supplies.map(supply => {
+    if (supply.id !== itemId) return supply;
+
+    return {
+      ...supply,
+      quantity: (Number(supply.quantity) || 0) + quantity
+    };
+  });
+
+  purchases.push({
+    id: crypto.randomUUID(),
+    itemId,
+    itemName: item.name,
+    quantity,
+    store,
+    cost,
+    timestamp: new Date().toISOString()
+  });
+
+  saveSupplies();
+  savePurchases();
+  render();
+  openModal("supplies");
+}
+
+function addWishlistItem() {
+  const input = document.getElementById("wishlistInput");
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  wishlist.push({
+    id: crypto.randomUUID(),
+    text,
+    completed: false
+  });
+
+  saveWishlist();
+  render();
+  openModal("supplies");
+}
+
+function toggleWishlistItem(id) {
+  wishlist = wishlist.map(item => {
+    if (item.id !== id) return item;
+    return { ...item, completed: !item.completed };
+  });
+
+  saveWishlist();
+  render();
+  openModal("supplies");
+}
+
+function deleteWishlistItem(id) {
+  wishlist = wishlist.filter(item => item.id !== id);
+  saveWishlist();
+  render();
+  openModal("supplies");
+}
+
 
 function activityHTML() {
   const positions = countToday("position");

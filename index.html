@@ -1,18 +1,19 @@
 <!--
 Caregiver Companion
-Version: 0.8.3
+Version: 0.8.4
 Date: June 16, 2026
 Changes:
-- Kept CSS inside index.html and moved JavaScript to app.js
-- Added custom purchase item option
-- Added brand and URL fields to supplies and purchase records
+- Added Care Routines for Miralax and Enemas
+- Added dashboard cards for Miralax daily goal and Enema weekly goal
+- Updated quick-add button labels to use + before the action name
+- Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
 - Added inventory items with low-stock warnings
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.2 single-file emergency styling fix
+Previous Version: v0.8.3 supplies custom purchase upgrade
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -602,6 +603,27 @@ textarea {
   font-weight: bold;
 }
 
+  
+/* Care routine dashboard cards */
+.routine-summary-card strong {
+  font-size: 1rem;
+}
+
+.routine-good {
+  background: var(--soft-green);
+  border-color: #9fd5b5;
+}
+
+.routine-warning {
+  background: #fff7e6;
+  border-color: #f4c86a;
+}
+
+.routine-alert {
+  background: #fff0f0;
+  border-color: #e08b8b;
+}
+
   </style>
 </head>
 
@@ -652,6 +674,19 @@ textarea {
           <div class="summary-card"><span class="icon">🍎</span><strong id="foodCount">0</strong><span>Foods</span></div>
           <div class="summary-card"><span class="icon">💦</span><strong id="peeCount">0</strong><span>Pee</span></div>
           <div class="summary-card"><span class="icon">💩</span><strong id="poopyCount">0</strong><span>Poopy</span></div>
+
+          <div class="summary-card routine-summary-card" id="miralaxCard">
+            <span class="icon">🥤</span>
+            <strong id="miralaxCount">0 / 3</strong>
+            <span>Miralax</span>
+          </div>
+
+          <div class="summary-card routine-summary-card" id="enemaCard">
+            <span class="icon">🧴</span>
+            <strong id="enemaCount">0 / 2 wk</strong>
+            <span id="enemaDays">None</span>
+          </div>
+
           <div class="summary-card"><span class="icon">🌡</span><strong id="latestTemp">—</strong><span>Temp</span></div>
           <div class="summary-card med-summary-card" id="nextMedCard">
             <span class="icon">💊</span>
@@ -674,25 +709,25 @@ textarea {
           <div class="quick-group">
             <h3>🍼 Feeding</h3>
             <div class="quick-buttons">
-              <button onclick="quickAdd('shake')">🍼 Shake</button>
-              <button onclick="quickAdd('water', '8 oz / 1 cup')">💧 Water</button>
-              <button onclick="openModal('food')">🍎 Food</button>
+              <button onclick="quickAdd('shake')">🍼 + Shake</button>
+              <button onclick="quickAdd('water', '8 oz / 1 cup')">💧 + Water</button>
+              <button onclick="openModal('food')">🍎 + Food</button>
             </div>
           </div>
 
           <div class="quick-group">
             <h3>💩 Diapers</h3>
             <div class="quick-buttons">
-              <button onclick="quickAdd('pee')">💦 Pee</button>
-              <button onclick="quickAdd('poopy')">💩 Poopy</button>
+              <button onclick="quickAdd('pee')">💦 + Pee</button>
+              <button onclick="quickAdd('poopy')">💩 + Poopy</button>
             </div>
           </div>
 
           <div class="quick-group">
             <h3>☀️ Daily Notes</h3>
             <div class="quick-buttons">
-              <button onclick="openModal('wake')">☀️ Wake Up</button>
-              <button onclick="openModal('notes')">📝 Note</button>
+              <button onclick="openModal('wake')">☀️ + Wake Up</button>
+              <button onclick="openModal('notes')">📝 + Note</button>
             </div>
           </div>
         </div>
@@ -717,6 +752,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.3" defer></script>
+    <script src="./app.js?v=0.8.4" defer></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ const SUPPLIES_KEY = "caregiverCompanion_supplies";
 const PURCHASES_KEY = "caregiverCompanion_purchases";
 const WISHLIST_KEY = "caregiverCompanion_wishlist";
 const SETTINGS_KEY = "caregiverCompanion_settings";
-const BACKUP_VERSION = "0.8.13";
+const BACKUP_VERSION = "0.8.14";
 
 const LEGACY_KEYS = {
   entries: [
@@ -172,6 +172,7 @@ let foodFavorites = loadArrayFromStorage(FAVORITES_KEY, LEGACY_KEYS.favorites, [
   "Pudding"
 ]);
 
+completeLegacyMigrationOnce();
 
 function dedupeEntriesByTimestampTypeDetails(items) {
   const seen = new Set();
@@ -1914,7 +1915,6 @@ function hygieneHTML() {
       <h2>Quick Add</h2>
       <div class="quick-buttons">
         <button onclick="quickAdd('teeth')">🪥 + Teeth</button>
-        <button onclick="quickAdd('teeth_evening')">🪥 + Teeth</button>
         <button onclick="quickAdd('full_bath')">🚿 + Full Bath</button>
         <button onclick="quickAdd('sponge_bath')">🛁 + Sponge Bath</button>
         <button onclick="quickAdd('nails')">✂️ + Nails Clipped</button>

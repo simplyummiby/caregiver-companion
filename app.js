@@ -4,7 +4,7 @@ const SUPPLIES_KEY = "caregiverCompanion_supplies";
 const PURCHASES_KEY = "caregiverCompanion_purchases";
 const WISHLIST_KEY = "caregiverCompanion_wishlist";
 const SETTINGS_KEY = "caregiverCompanion_settings";
-const BACKUP_VERSION = "0.8.12";
+const BACKUP_VERSION = "0.8.13";
 
 const LEGACY_KEYS = {
   entries: [
@@ -92,10 +92,31 @@ function mergeArraysByIdentity(arrays) {
   return merged;
 }
 
+function getMigrationSettings() {
+  return safeJSONParse(localStorage.getItem(SETTINGS_KEY), {});
+}
+
+function saveMigrationSettings(settings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
 function loadArrayFromStorage(stableKey, legacyKeys, fallback = []) {
+  const settings = getMigrationSettings();
+  const stable = safeJSONParse(localStorage.getItem(stableKey), []);
+
+  if (Array.isArray(stable) && stable.length) {
+    return stable;
+  }
+
+  if (settings.legacyMigrationComplete) {
+    if (Array.isArray(stable)) return stable;
+
+    localStorage.setItem(stableKey, JSON.stringify(fallback));
+    return fallback;
+  }
+
   const arrays = [];
 
-  const stable = safeJSONParse(localStorage.getItem(stableKey), []);
   if (Array.isArray(stable)) arrays.push(stable);
 
   legacyKeys.forEach(key => {
@@ -112,6 +133,18 @@ function loadArrayFromStorage(stableKey, legacyKeys, fallback = []) {
 
   localStorage.setItem(stableKey, JSON.stringify(fallback));
   return fallback;
+}
+
+function completeLegacyMigrationOnce() {
+  const settings = getMigrationSettings();
+
+  if (settings.legacyMigrationComplete) return;
+
+  saveMigrationSettings({
+    ...settings,
+    legacyMigrationComplete: true,
+    legacyMigrationCompletedAt: new Date().toISOString()
+  });
 }
 
 let entries = loadArrayFromStorage(STORAGE_KEY, LEGACY_KEYS.entries, []);
@@ -138,6 +171,34 @@ let foodFavorites = loadArrayFromStorage(FAVORITES_KEY, LEGACY_KEYS.favorites, [
   "Mashed Potatoes",
   "Pudding"
 ]);
+
+
+function dedupeEntriesByTimestampTypeDetails(items) {
+  const seen = new Set();
+  const result = [];
+
+  items.forEach(entry => {
+    const key = [
+      entry.type || "",
+      entry.timestamp || "",
+      entry.details || "",
+      entry.loadType || "",
+      entry.temperature || "",
+      entry.medName || ""
+    ].join("|");
+
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    result.push(entry);
+  });
+
+  return result;
+}
+
+
+entries = dedupeEntriesByTimestampTypeDetails(entries);
+save();
 
 const icons = {
   wake: "☀️",
@@ -2101,6 +2162,7 @@ function localStorageStatusMessage() {
 function savedDataSummary() {
   return `
     Stable storage keys active.<br>
+    Legacy migration: ${getMigrationSettings().legacyMigrationComplete ? "Complete" : "Pending"}<br>
     Entries: ${entries.length}<br>
     Supplies: ${supplies.length}<br>
     Purchases: ${purchases.length}<br>

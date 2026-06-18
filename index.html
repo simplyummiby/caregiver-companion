@@ -1,11 +1,11 @@
 <!--
 Caregiver Companion
-Version: 0.8.12
+Version: 0.8.13
 Date: June 16, 2026
 Changes:
-- Simplified teeth tracking from Morning/Evening Teeth to one general Teeth entry
-- Updated quick log, manual entry, hygiene timeline, and dashboard teeth count
-- Added migration support so older teeth_morning and teeth_evening entries still count
+- Fixed refresh duplication caused by repeated legacy storage migration
+- Migration now runs once, then loads only stable storage keys
+- Kept general Teeth tracking
 - Kept permanent localStorage keys
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
@@ -14,7 +14,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.11 persistent storage key fix
+Previous Version: v0.8.12 general teeth tracking
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -827,6 +827,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.12" defer></script>
+    <script src="./app.js?v=0.8.13" defer></script>
 </body>
 </html>

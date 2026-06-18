@@ -1,12 +1,12 @@
 <!--
 Caregiver Companion
-Version: 0.8.13
+Version: 0.8.14
 Date: June 16, 2026
 Changes:
-- Fixed refresh duplication caused by repeated legacy storage migration
-- Migration now runs once, then loads only stable storage keys
-- Kept general Teeth tracking
-- Kept permanent localStorage keys
+- Clean rebuild of index.html and app.js after file mix-up troubleshooting
+- Confirmed app.js contains JavaScript only and no HTML
+- Removed leftover duplicate teeth_evening quick button from Hygiene modal
+- Kept refresh duplication fix and permanent localStorage keys
 - Kept CSS inside index.html and JavaScript in app.js
 - Built Supplies & Inventory module
 - Added dashboard supplies status card
@@ -14,7 +14,7 @@ Changes:
 - Added quantity +/- controls
 - Added purchase log that updates inventory
 - Added wishlist checklist
-Previous Version: v0.8.12 general teeth tracking
+Previous Version: v0.8.13 refresh duplication fix
 Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related features yet.
 -->
 
@@ -24,7 +24,6 @@ Risk: Local storage only. No cloud sync, auth, database, or HIPAA-related featur
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Caregiver Companion</title>
-  <link rel="icon" type="image/png" href="favicon.png">
   <style>
 :root {
   --bg: #f8f6ff;
@@ -828,6 +827,6 @@ textarea {
       <div id="modalContent"></div>
     </div>
   </div>
-    <script src="./app.js?v=0.8.13" defer></script>
+    <script src="./app.js?v=0.8.14" defer></script>
 </body>
 </html>

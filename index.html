@@ -5,7 +5,7 @@ Date: June 19, 2026
 What was added:
 - Single-page responsive daily caregiving tracker for Muhammad.
 - Local-first event log using localStorage keys caregiverCompanion_entries and caregiverCompanion_settings.
-- Today dashboard with mockup-level visual polish, wake/mood status cards, updated care summary tiles, grouped quick actions, editable timeline times, and deleteable timeline.
+- Today dashboard with mockup-level visual polish, wake/mood status cards, updated care summary tiles, grouped Quick Add buttons, editable timeline times, and deleteable timeline.
 - Future Supabase sync placeholders and event shape aligned to planned care_entries and care_settings tables.
 
 What changed:
@@ -76,6 +76,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .brand-icon { width: 54px; height: 54px; border-radius: 19px; display: grid; place-items: center; background: linear-gradient(135deg, #8a5cff, #4527a0); font-size: 1.8rem; box-shadow: 0 14px 30px rgba(0,0,0,.22); }
     .brand strong { display: block; font-size: 1.32rem; line-height: 1.14; letter-spacing: -.02em; }
     .brand span { display:block; margin-top: 4px; color: #d9d3ff; font-size: .82rem; }
+    .release-label { width: fit-content; margin-top: 8px !important; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff !important; font-weight: 900; letter-spacing: .01em; }
     .nav { display: grid; gap: 8px; }
     .nav button { border: 0; border-radius: 10px; padding: 13px 14px; text-align: left; color: #f4f0ff; background: transparent; display:flex; gap:12px; align-items:center; font-size: 1.02rem; }
     .nav button::first-letter { font-size: 1.1em; }
@@ -110,29 +111,26 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .summary-card .icon { font-size: 2.15rem; line-height:1; }
     .summary-card strong { display: block; font-size: 1.65rem; margin: 13px 0 6px; color: #17104d; }
     .summary-card span { color: #19163e; font-size: .95rem; }
-    .quick-log { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 14px; }
+    .quick-log { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 14px; }
     .quick-group { display: grid; gap: 10px; align-content:start; }
     .quick-group h3 { margin: 0; color: var(--primary); font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; }
-    .quick-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
+    .quick-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
     .action-btn, .ghost-btn, .danger-btn { border: 0; border-radius: 16px; font-weight: 900; transition: transform .15s, box-shadow .15s, border-color .15s; }
-    .action-btn { min-height: 86px; padding: 12px 10px; color: var(--primary); background: linear-gradient(180deg, #fff, #faf8ff); border: 1px solid var(--line); box-shadow:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 8px; }
-    .action-btn .quick-icon { font-size: 2rem; line-height:1; }
+    .action-btn { min-height: 44px; padding: 9px 12px; color: var(--primary); background: linear-gradient(180deg, #fff, #faf8ff); border: 1px solid var(--line); box-shadow:none; display:inline-flex; flex-direction:row; align-items:center; justify-content:center; gap: 6px; white-space: nowrap; }
+    .action-btn .quick-icon { display: none; }
     .action-btn:hover, .ghost-btn:hover { transform: translateY(-2px); box-shadow: var(--small-shadow); border-color: #bcaef0; }
     .ghost-btn { background: #fff; color: var(--primary); border: 1px solid var(--line); padding: 10px 13px; }
     .danger-btn { color: var(--danger); background: #fff0f4; border: 1px solid #ffd1dc; padding: 7px 10px; font-size: .82rem; }
     .edit-btn { color: var(--primary); background: #f4efff; border: 1px solid #dacdfb; padding: 7px 10px; border-radius: 16px; font-weight: 900; font-size: .82rem; }
     .timeline-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
-    .timeline-wrap { position: relative; display:grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 18px; align-items:start; }
+    .timeline-wrap { position: relative; display:grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items:start; }
     .timeline { display: grid; gap: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.65); }
     .timeline-item { display: grid; grid-template-columns: 92px 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ebe6f5; background: rgba(255,255,255,.42); }
     .timeline-item:last-child { border-bottom: 0; }
     .time { color: #15113b; font-weight: 900; font-size: .92rem; }
     .timeline-icon { width: 35px; height: 35px; border-radius: 12px; display: grid; place-items: center; font-size: 1.3rem; }
     .timeline-details { color: var(--muted); margin-top: 2px; font-size: .9rem; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
-    .timeline-menu { padding: 12px; }
-    .timeline-menu button { width:100%; display:flex; align-items:center; gap: 12px; background:transparent; border:0; padding: 11px 12px; border-radius: 12px; color: var(--ink); text-align:left; }
-    .timeline-menu button:hover { background: var(--lavender); }
-    .fab { position:absolute; right: 14px; bottom: 14px; width: 74px; height: 74px; border-radius: 50%; border:0; background: linear-gradient(135deg, #7c54df, #4527a0); color:#fff; font-size: 3rem; line-height:1; box-shadow: 0 18px 36px rgba(73,39,160,.28); }
+
     .empty { text-align: center; padding: 34px; color: var(--muted); border: 2px dashed var(--line); border-radius: 18px; background: rgba(255,255,255,.55); }
     .placeholder-page { display: none; max-width: 1120px; margin: 0 auto; }
     dialog { width: min(92vw, 480px); border: 0; border-radius: 26px; padding: 0; box-shadow: 0 30px 90px rgba(34, 21, 68, .32); }
@@ -160,7 +158,6 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       .quick-log { grid-template-columns: 1fr; }
       .timeline-item { grid-template-columns: 70px 34px 1fr; }
       .timeline-actions { grid-column: 3; justify-content:flex-start; }
-      .fab { position: fixed; right: 18px; bottom: 18px; width: 66px; height: 66px; }
     }
   </style>
 </head>
@@ -169,7 +166,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
   <div class="drawer-scrim" id="drawerScrim"></div>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
-      <div class="brand"><div class="brand-icon">💜</div><div><strong>Caregiver<br>Companion</strong><span>v0.1 local-first</span></div></div>
+      <div class="brand"><div class="brand-icon">💜</div><div><strong>Caregiver<br>Companion</strong><span>v0.1 local-first</span><span class="release-label">v0.1 Quick Add update</span></div></div>
       <nav class="nav" id="navList"></nav>
     </aside>
     <main>
@@ -180,8 +177,8 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
           <aside class="mood-card"><span class="mood-emoji" id="currentMoodEmoji">🙂</span><div><strong>Mood</strong><p id="currentMoodText">Good</p></div></aside>
         </div>
         <section class="panel"><div class="section-title"><div><h2>Today’s Summary</h2></div></div><div class="summary-grid" id="summaryGrid" aria-label="Today's summary"></div></section>
-        <section class="panel"><div class="section-title"><div><h2>Quick Actions</h2><p>Tap to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
-        <section class="panel"><div class="section-title"><div><h2>Today’s Timeline</h2><p>All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div><div class="timeline-menu" id="timelineMenu"></div><button class="fab" id="fabButton" aria-label="Open quick actions">+</button></div></section>
+        <section class="panel"><div class="section-title"><div><h2>Quick Add</h2><p>Tap a compact button to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
+        <section class="panel"><div class="section-title"><div><h2>Today’s Timeline</h2><p>All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div></section>
       </section>
       <section class="panel placeholder-page" id="placeholderView"><h2 id="placeholderTitle"></h2><p class="muted">This area is reserved for a future focused view. v0.1 keeps daily tracking on the Today dashboard.</p></section>
     </main>
@@ -257,20 +254,19 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Good"; }
     function renderSummary() { const colors = ["var(--gold)", "var(--blue)", "var(--lavender)", "var(--sage)", "var(--teal)", "var(--peach)", "#fff5ec", "#f8f2ff", "#f4fbef", "#fbf7ff"]; document.getElementById("summaryGrid").innerHTML = summaryCards().map(([icon, value, label], index) => `<article class="summary-card" style="background:${colors[index % colors.length]}"><span class="icon">${icon}</span><strong>${value}</strong><span>${label}</span></article>`).join(""); }
     function renderQuickLog() { const groups = [
-      { title: "Feeding", buttons: [["shake", "🍼", "+ Shake"], ["water", "💧", "+ Water"], ["food", "🍏", "+ Food", true], ["miralax", "🥤", "+ Miralax"]] },
-      { title: "Diapers", buttons: [["pee", "🩲", "+ Pee"], ["poopy", "💩", "+ Poopy"]] },
-      { title: "Daily Care", buttons: [["wake", "☀️", "+ Wake Up", true], ["teeth", "🪥", "+ Teeth"], ["bath", "🛁", "+ Bath"], ["lotion", "🧴", "+ Lotion"], ["nails", "✂️", "+ Nails"]] },
-      { title: "Household", buttons: [["laundry", "🧺", "+ Laundry", true], ["enema", "⚕️", "+ Enema"]] }
-    ]; document.getElementById("quickLog").innerHTML = groups.map(group => `<div class="quick-group"><h3>${group.title}</h3><div class="quick-buttons">${group.buttons.map(([type, icon, text, modal]) => `<button class="action-btn" data-type="${type}" data-modal="${modal ? "true" : "false"}"><span class="quick-icon">${icon}</span><span>${text}</span></button>`).join("")}</div></div>`).join(""); renderTimelineMenu(); }
+      { title: "Feeding", buttons: [["shake", "🍼", "Shake"], ["water", "💧", "Water"], ["food", "🍏", "Food", true], ["miralax", "🥤", "Miralax"]] },
+      { title: "Toileting & Diapers", buttons: [["pee", "🩲", "Pee"], ["poopy", "💩", "Poopy"], ["enema", "⚕️", "Enema"]] },
+      { title: "Daily Care", buttons: [["wake", "☀️", "Wake Up", true], ["mood", "😊", "Mood", true], ["teeth", "🪥", "Teeth"], ["bath", "🛁", "Bath"], ["lotion", "🧴", "Lotion"], ["nails", "✂️", "Nails"]] },
+      { title: "Household", buttons: [["laundry", "🧺", "Laundry", true]] }
+    ]; document.getElementById("quickLog").innerHTML = groups.map(group => `<div class="quick-group"><h3>${group.title}</h3><div class="quick-buttons">${group.buttons.map(([type, icon, text, modal]) => `<button class="action-btn" data-type="${type}" data-modal="${modal ? "true" : "false"}"><span class="quick-icon">${icon}</span><span>+ ${icon} ${text}</span></button>`).join("")}</div></div>`).join(""); }
     function renderTimeline() { const todays = todayEntries(); document.getElementById("timeline").innerHTML = todays.length ? todays.map(entry => { const [icon, label] = eventMeta[entry.type] || ["✨", entry.type]; return `<article class="timeline-item"><div class="time">${formatTime(entry.timestamp)}</div><div class="timeline-icon">${icon}</div><div><strong>${label}</strong><div class="timeline-details">${detailsText(entry)}</div></div><div class="timeline-actions"><button class="edit-btn" data-edit="${entry.id}">Edit</button><button class="danger-btn" data-delete="${entry.id}">Delete</button></div></article>`; }).join("") : `<div class="empty">No entries yet today. Quick log something when you are ready 💜</div>`; }
 
-    function renderTimelineMenu() { const menu = document.getElementById("timelineMenu"); if (!menu) return; menu.innerHTML = [["shake", "🍼", "+ Add Shake"], ["water", "💧", "+ Add Water"], ["food", "🍏", "+ Add Food", true], ["pee", "🩲", "+ Add Pee"], ["poopy", "💩", "+ Add Poopy"], ["wake", "☀️", "+ Add Wake Up", true], ["laundry", "🧺", "+ Add Laundry", true], ["note", "📝", "+ Add Note", true]].map(([type, icon, label, modal]) => `<button data-type="${type}" data-modal="${modal ? "true" : "false"}"><span>${icon}</span><span>${label}</span></button>`).join(""); }
 
     // ===== modals =====
     function openEntryModal(type) {
       activeModalType = type;
       editingEntryId = null;
-      const titles = { food: "Log food", note: "Add note", wake: "Log wake up", laundry: "Log laundry load" };
+      const titles = { food: "Log food", note: "Add note", wake: "Log wake up", laundry: "Log laundry load", mood: "Log mood" };
       document.getElementById("modalTitle").textContent = titles[type] || `Log ${labelFor(type)}`;
       document.getElementById("modalFields").innerHTML = modalFieldsFor(type);
       document.getElementById("entryModal").showModal();
@@ -279,6 +275,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       const d = entry?.details || {};
       if (type === "food") return `<div class="field"><label for="foodName">Food name</label><input id="foodName" required value="${escapeHTML(d.foodName || "")}" placeholder="Applesauce, oatmeal, shake supplement..." /></div><div class="field"><label for="foodAmount">Amount optional</label><input id="foodAmount" value="${escapeHTML(d.amount || "")}" placeholder="A few bites, 1 cup, half bowl..." /></div><div class="field"><label for="foodNotes">Notes optional</label><textarea id="foodNotes" placeholder="How it went, preferences, anything helpful...">${escapeHTML(d.notes || "")}</textarea></div>`;
       if (type === "wake") return `<div class="field"><label for="wakeTime">Wake up time</label><input id="wakeTime" type="time" required value="${entry ? timeInputValue(entry.timestamp) : timeInputValue(new Date())}" /></div><div class="field"><label for="wakeMood">Mood optional</label><select id="wakeMood"><option value="">No mood</option>${moodOptions(d.mood)}</select></div>`;
+      if (type === "mood") return `<div class="field"><label for="quickMood">Mood</label><select id="quickMood" required>${moodOptions(d.mood || "Good")}</select></div>`;
       if (type === "laundry") return `<div class="field"><label for="loadType">Load type</label><select id="loadType"><option ${d.loadType === "Blankets" ? "selected" : ""}>Blankets</option><option ${d.loadType === "Clothes" ? "selected" : ""}>Clothes</option><option ${d.loadType === "Mixed" ? "selected" : ""}>Mixed</option><option ${d.loadType === "Bed pads" ? "selected" : ""}>Bed pads</option></select></div><div class="field"><label for="laundryNotes">Notes optional</label><textarea id="laundryNotes" placeholder="Anything useful about the load...">${escapeHTML(d.notes || "")}</textarea></div>`;
       if (type === "edit") return `<div class="field"><label for="editDateTime">Actual date and time</label><input id="editDateTime" type="datetime-local" required value="${dateTimeInputValue(entry.timestamp)}" /></div><p class="muted">Use this if the timeline used the current time but you need to correct when the care happened.</p>`;
       return `<div class="field"><label for="noteText">Note</label><textarea id="noteText" required placeholder="Write a gentle note about today...">${escapeHTML(d.text || "")}</textarea></div><div class="field"><label for="noteMood">Mood optional</label><select id="noteMood"><option value="">No mood</option>${moodOptions(d.mood)}</select></div>`;
@@ -303,12 +300,15 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
         const mood = value("wakeMood");
         const wakeDate = dateWithTime(value("wakeTime"));
         entries.push(createEvent("wake", { mood, moodEmoji: mood ? "😊" : undefined }, wakeDate));
-        if (mood) entries.push(createEvent("mood", { mood, moodEmoji: "😊", source: "wake" }, wakeDate));
         persistAndRender("Wake up saved");
       }
       if (activeModalType === "laundry") {
         entries.push(createEvent("laundry", { loadType: value("loadType"), notes: value("laundryNotes") }));
         persistAndRender("Laundry saved");
+      }
+      if (activeModalType === "mood") {
+        entries.push(createEvent("mood", { mood: value("quickMood"), moodEmoji: "😊", source: "quick-add" }));
+        persistAndRender("Mood saved");
       }
       if (activeModalType === "note") {
         const mood = value("noteMood");
@@ -346,7 +346,6 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     document.getElementById("cancelModal").addEventListener("click", closeModal);
     document.getElementById("modalForm").addEventListener("submit", submitModal);
     document.getElementById("clearTodayButton").addEventListener("click", () => document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }));
-    document.getElementById("fabButton").addEventListener("click", () => openEntryModal("note"));
 
     loadStorage();
     render();

@@ -106,8 +106,11 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .section-title { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-bottom: 16px; }
     .section-title h2 { margin: 0; color: #32159a; font-size: 1.05rem; letter-spacing: .03em; text-transform: uppercase; }
     .section-title p { margin: 5px 0 0; color: var(--muted); }
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 14px; }
-    .summary-card { min-height: 142px; padding: 16px 10px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:none; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .summary-section { display: grid; gap: 10px; align-content:start; }
+    .summary-section h3 { margin: 0; color: var(--primary); font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; }
+    .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
+    .summary-card { min-height: 124px; padding: 14px 10px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:none; }
     .summary-card .icon { font-size: 2.15rem; line-height:1; }
     .summary-card strong { display: block; font-size: 1.65rem; margin: 13px 0 6px; color: #17104d; }
     .summary-card span { color: #19163e; font-size: .95rem; }
@@ -156,7 +159,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       .top-row { grid-template-columns: 1fr; }
       .person-card { align-items:flex-start; }
       .avatar { width: 68px; height: 68px; font-size: 2rem; }
-      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary-grid { grid-template-columns: 1fr; }
       .quick-log { grid-template-columns: 1fr; }
       .timeline-item { grid-template-columns: 86px 34px 1fr; }
       .timeline-actions { grid-column: 3; justify-content:flex-start; }
@@ -258,17 +261,12 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function latestMood() { return [...todayEntries()].reverse().find(entry => entry.type === "mood" || entry.details?.mood); }
     function latestToday(type) { return [...todayEntries()].reverse().find(entry => entry.type === type); }
     function weeklyCount(type) { const now = new Date(); const start = new Date(now); start.setDate(now.getDate() - now.getDay()); start.setHours(0,0,0,0); return entries.filter(entry => entry.type === type && new Date(entry.timestamp) >= start).length; }
-    function summaryCards() {
+    function summarySections() {
       return [
-        ["💧", `${countToday("water")} / ${settings.waterGoal}`, "Water"],
-        ["🍼", countToday("shake"), "Shakes"],
-        ["🍎", countToday("food"), "Food"],
-        ["💦", countToday("pee"), "Pee"],
-        ["💩", countToday("poopy"), "Poopy"],
-        ["🪥", `${countToday("teeth")} / ${settings.teethGoal}`, "Teeth"],
-        ["🧺", countToday("laundry"), "Laundry Loads"],
-        ["🥤", `${countToday("miralax")} / 2`, "Miralax"],
-        ["⚕️", `${weeklyCount("enema")} / ${settings.enemaWeeklyGoal}`, "Enema Weekly"]
+        { title: "Feeding & Hydration", cards: [["💧", `${countToday("water")} / ${settings.waterGoal}`, "Water"], ["🍼", countToday("shake"), "Shakes"], ["🍎", countToday("food"), "Food"]] },
+        { title: "Toileting & Diapers", cards: [["💦", countToday("pee"), "Pee"], ["💩", countToday("poopy"), "Poopy"], ["⚕️", `${weeklyCount("enema")} / ${settings.enemaWeeklyGoal}`, "Enema Weekly"]] },
+        { title: "Daily Care", cards: [["🪥", `${countToday("teeth")} / ${settings.teethGoal}`, "Teeth"], ["🧺", countToday("laundry"), "Laundry Loads"]] },
+        { title: "Meds & Supplements", cards: [["🥤", `${countToday("miralax")} / 2`, "Miralax"]] }
       ];
     }
 
@@ -276,7 +274,11 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function render() { renderNavigation(); renderHeader(); renderSummary(); renderQuickLog(); renderTimeline(); }
     function renderNavigation() { document.getElementById("navList").innerHTML = navItems.map((item, index) => `${index === 12 ? '<div class="nav-separator"></div>' : ''}<button class="${index === 0 ? "active" : ""}" data-page="${item.replace(/^[^A-Za-z?]+\s*/, "")}">${item}</button>`).join(""); }
     function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Not set"; }
-    function renderSummary() { const colors = ["var(--gold)", "var(--blue)", "var(--lavender)", "var(--sage)", "var(--teal)", "var(--peach)", "#fff5ec", "#f8f2ff", "#f4fbef", "#fbf7ff"]; document.getElementById("summaryGrid").innerHTML = summaryCards().map(([icon, value, label], index) => `<article class="summary-card" style="background:${colors[index % colors.length]}"><span class="icon">${icon}</span><strong>${value}</strong><span>${label}</span></article>`).join(""); }
+    function renderSummary() {
+      const colors = ["var(--gold)", "var(--blue)", "var(--lavender)", "var(--sage)", "var(--teal)", "var(--peach)", "#fff5ec", "#f8f2ff", "#f4fbef", "#fbf7ff"];
+      let colorIndex = 0;
+      document.getElementById("summaryGrid").innerHTML = summarySections().map(section => `<section class="summary-section"><h3>${section.title}</h3><div class="summary-cards">${section.cards.map(([icon, value, label]) => { const color = colors[colorIndex++ % colors.length]; return `<article class="summary-card" style="background:${color}"><span class="icon">${icon}</span><strong>${value}</strong><span>${label}</span></article>`; }).join("")}</div></section>`).join("");
+    }
     function renderQuickLog() { const groups = [
       { title: "Feeding", buttons: [["shake", "🍼", "Shake"], ["water", "💧", "Water"], ["food", "🍏", "Food", true], ["miralax", "🥤", "Miralax"]] },
       { title: "Toileting & Diapers", buttons: [["pee", "🩲", "Pee"], ["poopy", "💩", "Poopy"], ["enema", "⚕️", "Enema"]] },

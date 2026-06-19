@@ -127,7 +127,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .data-reset p { flex: 1 1 240px; margin: 0; color: var(--muted); font-size: .92rem; }
     .timeline-wrap { position: relative; display:grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items:start; }
     .timeline { display: grid; gap: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.65); }
-    .timeline-item { display: grid; grid-template-columns: 92px 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ebe6f5; background: rgba(255,255,255,.42); }
+    .timeline-item { display: grid; grid-template-columns: 120px 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ebe6f5; background: rgba(255,255,255,.42); }
     .timeline-item:last-child { border-bottom: 0; }
     .time { color: #15113b; font-weight: 900; font-size: .92rem; }
     .timeline-icon { width: 35px; height: 35px; border-radius: 12px; display: grid; place-items: center; font-size: 1.3rem; }
@@ -158,7 +158,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       .avatar { width: 68px; height: 68px; font-size: 2rem; }
       .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .quick-log { grid-template-columns: 1fr; }
-      .timeline-item { grid-template-columns: 70px 34px 1fr; }
+      .timeline-item { grid-template-columns: 86px 34px 1fr; }
       .timeline-actions { grid-column: 3; justify-content:flex-start; }
       .data-reset { align-items: stretch; }
       .data-reset .danger-btn { width: 100%; }
@@ -170,7 +170,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
   <div class="drawer-scrim" id="drawerScrim"></div>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
-      <div class="brand"><div class="brand-icon">💜</div><div><strong>Caregiver<br>Companion</strong><span>v0.1 local-first</span><span class="release-label">v0.1 Quick Add update</span></div></div>
+      <div class="brand"><div class="brand-icon">💜</div><div><strong>Caregiver<br>Companion</strong><span>v0.1 local-first</span><span class="release-label">v0.1 Quick Add + reset tools</span></div></div>
       <nav class="nav" id="navList"></nav>
     </aside>
     <main>
@@ -178,11 +178,11 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
         <div class="top-row">
           <div class="person-card"><div class="avatar" aria-hidden="true">👦🏽</div><div><h1><span id="personHeading">Muhammad</span> <span class="heart">♡</span></h1><p id="dateHeading"></p></div></div>
           <aside class="wake-card"><span class="wake-icon">☀️</span><div><strong>Wake Up</strong><p id="wakeTimeText">Not set</p></div></aside>
-          <aside class="mood-card"><span class="mood-emoji" id="currentMoodEmoji">🙂</span><div><strong>Mood</strong><p id="currentMoodText">Good</p></div></aside>
+          <aside class="mood-card"><span class="mood-emoji" id="currentMoodEmoji">🙂</span><div><strong>Mood</strong><p id="currentMoodText">Not set</p></div></aside>
         </div>
         <section class="panel"><div class="section-title"><div><h2>Today’s Summary</h2></div></div><div class="summary-grid" id="summaryGrid" aria-label="Today's summary"></div></section>
         <section class="panel"><div class="section-title"><div><h2>Quick Add</h2><p>Tap a compact button to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
-        <section class="panel"><div class="section-title"><div><h2>Today’s Timeline</h2><p>All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools for this local device only. Use these if old localStorage entries are stuck.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all app data</button></div></section>
+        <section class="panel"><div class="section-title"><div><h2 id="timelineTitle">Today’s Timeline</h2><p id="timelineSubtitle">All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools for this local device only. Use these if old localStorage entries, such as a weekly Enema count, are stuck.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all local app data</button></div></section>
       </section>
       <section class="panel placeholder-page" id="placeholderView"><h2 id="placeholderTitle"></h2><p class="muted">This area is reserved for a future focused view. v0.1 keeps daily tracking on the Today dashboard.</p></section>
     </main>
@@ -198,6 +198,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     let settings = { ...defaultSettings };
     let activeModalType = null;
     let editingEntryId = null;
+    let timelineMode = "today";
     const navItems = ["🏠 Today", "🍼 Feeding & Hydration", "🩲 Diapers", "🪥 Hygiene", "🍎 Food Log", "🚶 Activity & Positioning", "🌡️ Health & Meds", "📅 Appointments", "📦 Supplies", "📝 Concerns & Notes", "👤 Contacts", "📊 Reports", "⚙️ Settings", "? Help"];
     const eventMeta = { shake: ["🍼", "Shake"], water: ["💧", "Water"], food: ["🍎", "Food"], pee: ["💦", "Pee"], poopy: ["💩", "Poopy"], wake: ["☀️", "Wake Up"], note: ["📝", "Note"], mood: ["😊", "Mood"], teeth: ["🪥", "Teeth Brushed"], bath: ["🛁", "Bath"], laundry: ["🧺", "Laundry"], nails: ["✂️", "Nails Clipped"], lotion: ["🧴", "Lotion"], miralax: ["🥤", "Miralax"], enema: ["⚕️", "Enema"] };
 
@@ -252,14 +253,13 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
 
     // ===== summary calculations =====
     function todayEntries() { const today = localDateKey(new Date()); return entries.filter(entry => localDateKey(new Date(entry.timestamp)) === today).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)); }
+    function allEntries() { return [...entries].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); }
     function countToday(type) { return todayEntries().filter(entry => entry.type === type).length; }
     function latestMood() { return [...todayEntries()].reverse().find(entry => entry.type === "mood" || entry.details?.mood); }
     function latestToday(type) { return [...todayEntries()].reverse().find(entry => entry.type === type); }
     function weeklyCount(type) { const now = new Date(); const start = new Date(now); start.setDate(now.getDate() - now.getDay()); start.setHours(0,0,0,0); return entries.filter(entry => entry.type === type && new Date(entry.timestamp) >= start).length; }
     function summaryCards() {
-      const mood = latestMood();
       return [
-        ["😊", mood ? mood.details.mood || "Set" : "Good", "Mood"],
         ["💧", `${countToday("water")} / ${settings.waterGoal}`, "Water"],
         ["🍼", countToday("shake"), "Shakes"],
         ["🍎", countToday("food"), "Food"],
@@ -275,7 +275,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     // ===== rendering =====
     function render() { renderNavigation(); renderHeader(); renderSummary(); renderQuickLog(); renderTimeline(); }
     function renderNavigation() { document.getElementById("navList").innerHTML = navItems.map((item, index) => `${index === 12 ? '<div class="nav-separator"></div>' : ''}<button class="${index === 0 ? "active" : ""}" data-page="${item.replace(/^[^A-Za-z?]+\s*/, "")}">${item}</button>`).join(""); }
-    function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Good"; }
+    function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Not set"; }
     function renderSummary() { const colors = ["var(--gold)", "var(--blue)", "var(--lavender)", "var(--sage)", "var(--teal)", "var(--peach)", "#fff5ec", "#f8f2ff", "#f4fbef", "#fbf7ff"]; document.getElementById("summaryGrid").innerHTML = summaryCards().map(([icon, value, label], index) => `<article class="summary-card" style="background:${colors[index % colors.length]}"><span class="icon">${icon}</span><strong>${value}</strong><span>${label}</span></article>`).join(""); }
     function renderQuickLog() { const groups = [
       { title: "Feeding", buttons: [["shake", "🍼", "Shake"], ["water", "💧", "Water"], ["food", "🍏", "Food", true], ["miralax", "🥤", "Miralax"]] },
@@ -283,7 +283,14 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       { title: "Daily Care", buttons: [["wake", "☀️", "Wake Up", true], ["mood", "😊", "Mood", true], ["teeth", "🪥", "Teeth"], ["bath", "🛁", "Bath"], ["lotion", "🧴", "Lotion"], ["nails", "✂️", "Nails"]] },
       { title: "Household", buttons: [["laundry", "🧺", "Laundry", true]] }
     ]; document.getElementById("quickLog").innerHTML = groups.map(group => `<div class="quick-group"><h3>${group.title}</h3><div class="quick-buttons">${group.buttons.map(([type, icon, text, modal]) => `<button class="action-btn" data-type="${type}" data-modal="${modal ? "true" : "false"}"><span class="quick-icon">${icon}</span><span>+ ${icon} ${text}</span></button>`).join("")}</div></div>`).join(""); }
-    function renderTimeline() { const todays = todayEntries(); document.getElementById("timeline").innerHTML = todays.length ? todays.map(entry => { const [icon, label] = eventMeta[entry.type] || ["✨", entry.type]; return `<article class="timeline-item"><div class="time">${formatTime(entry.timestamp)}</div><div class="timeline-icon">${icon}</div><div><strong>${label}</strong><div class="timeline-details">${detailsText(entry)}</div></div><div class="timeline-actions"><button class="edit-btn" data-edit="${entry.id}">Edit</button><button class="danger-btn" data-delete="${entry.id}">Delete</button></div></article>`; }).join("") : `<div class="empty">No entries yet today. Quick log something when you are ready 💜</div>`; }
+    function renderTimeline() {
+      const showingAll = timelineMode === "all";
+      const visibleEntries = showingAll ? allEntries() : todayEntries();
+      document.getElementById("timelineTitle").textContent = showingAll ? "All Entries" : "Today’s Timeline";
+      document.getElementById("timelineSubtitle").textContent = showingAll ? "Showing saved entries from every day on this device" : "All events are automatically time-stamped";
+      document.getElementById("clearTodayButton").textContent = showingAll ? "Show Today" : "View All →";
+      document.getElementById("timeline").innerHTML = visibleEntries.length ? visibleEntries.map(entry => { const [icon, label] = eventMeta[entry.type] || ["✨", entry.type]; return `<article class="timeline-item"><div class="time">${showingAll ? formatDateTime(entry.timestamp) : formatTime(entry.timestamp)}</div><div class="timeline-icon">${icon}</div><div><strong>${label}</strong><div class="timeline-details">${detailsText(entry)}</div></div><div class="timeline-actions"><button class="edit-btn" data-edit="${entry.id}">Edit</button><button class="danger-btn" data-delete="${entry.id}">Delete</button></div></article>`; }).join("") : `<div class="empty">${showingAll ? "No saved entries yet." : "No entries yet today. Quick log something when you are ready 💜"}</div>`;
+    }
 
 
     // ===== modals =====
@@ -349,6 +356,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function detailsText(entry) { const d = entry.details || {}; if (entry.type === "food") return [d.foodName, d.amount, d.notes].filter(Boolean).join(" • ") || "Food logged"; if (entry.type === "note") return [d.text, d.mood && `Mood: ${d.mood}`].filter(Boolean).join(" • "); if (entry.type === "wake") return d.mood ? `Mood: ${d.mood}` : "Wake up logged"; if (entry.type === "laundry") return [d.loadType, d.notes].filter(Boolean).join(" • ") || "Laundry load"; if (entry.type === "mood") return d.mood || "Mood set"; return "Instant log"; }
     function labelFor(type) { return eventMeta[type]?.[1] || type; }
     function formatTime(iso) { return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(iso)); }
+    function formatDateTime(iso) { return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(iso)); }
     function localDateKey(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
     function value(id) { return document.getElementById(id)?.value.trim() || ""; }
     function dateWithTime(timeValue) { const [hours, minutes] = timeValue.split(":").map(Number); const date = new Date(); date.setHours(hours, minutes, 0, 0); return date; }
@@ -369,7 +377,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     document.getElementById("drawerScrim").addEventListener("click", () => document.body.classList.remove("drawer-open"));
     document.getElementById("cancelModal").addEventListener("click", closeModal);
     document.getElementById("modalForm").addEventListener("submit", submitModal);
-    document.getElementById("clearTodayButton").addEventListener("click", () => document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }));
+    document.getElementById("clearTodayButton").addEventListener("click", () => { timelineMode = timelineMode === "all" ? "today" : "all"; renderTimeline(); document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }); });
     document.getElementById("clearWeekButton").addEventListener("click", clearThisWeeksData);
     document.getElementById("clearAllDataButton").addEventListener("click", clearAllAppData);
 

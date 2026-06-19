@@ -6,7 +6,7 @@ What was added:
 - Single-page responsive daily caregiving tracker for Muhammad.
 - Local-first event log using localStorage keys caregiverCompanion_entries and caregiverCompanion_settings.
 - Today dashboard with mockup-level visual polish, wake/mood status cards, updated care summary tiles, grouped Quick Add buttons, editable timeline times, and deleteable timeline.
-- Future Supabase sync placeholders and event shape aligned to planned care_entries and care_settings tables.
+- Optional Supabase email login/sync wiring with local-first fallback and event shape aligned to planned care_entries table.
 
 What changed:
 - Rebuilt the app as a focused v0.1 plain HTML/CSS/vanilla JavaScript implementation.
@@ -24,7 +24,7 @@ Update Caregiver Companion dashboard cards and quick logs
 --
 Add requested wake/mood status, care summary cards, grouped quick log actions, laundry load details, wake-up mood/time capture, and editable timeline times while keeping local-first storage.
 --
-Local storage only; no auth, payments, sharing, provider portal, or cloud sync implemented.
+Local-first storage with optional Supabase email login/sync when configured; no payments, sharing, provider portal, or medical-record workflows implemented.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -128,6 +128,10 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .timeline-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
     .data-reset { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
     .data-reset p { flex: 1 1 240px; margin: 0; color: var(--muted); font-size: .92rem; }
+    .sync-panel { display:grid; gap: 12px; }
+    .sync-actions { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; }
+    .sync-actions input { flex: 1 1 260px; }
+    .sync-status { margin: 0; color: var(--muted); font-size: .95rem; }
     .timeline-wrap { position: relative; display:grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items:start; }
     .timeline { display: grid; gap: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.65); }
     .timeline-item { display: grid; grid-template-columns: 120px 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ebe6f5; background: rgba(255,255,255,.42); }
@@ -165,6 +169,8 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       .timeline-actions { grid-column: 3; justify-content:flex-start; }
       .data-reset { align-items: stretch; }
       .data-reset .danger-btn { width: 100%; }
+      .sync-actions { align-items: stretch; }
+      .sync-actions .ghost-btn, .sync-actions input { width: 100%; }
     }
   </style>
 </head>
@@ -185,6 +191,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
         </div>
         <section class="panel"><div class="section-title"><div><h2>Today’s Summary</h2></div></div><div class="summary-grid" id="summaryGrid" aria-label="Today's summary"></div></section>
         <section class="panel"><div class="section-title"><div><h2>Quick Add</h2><p>Tap a compact button to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
+        <section class="panel sync-panel"><div class="section-title"><div><h2>Email Login & Sync</h2><p>Sign in to sync entries across your devices when Supabase is configured.</p></div></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p></section>
         <section class="panel"><div class="section-title"><div><h2 id="timelineTitle">Today’s Timeline</h2><p id="timelineSubtitle">All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools for this local device only. Use these if old localStorage entries, such as a weekly Enema count, are stuck.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all local app data</button></div></section>
       </section>
       <section class="panel placeholder-page" id="placeholderView"><h2 id="placeholderTitle"></h2><p class="muted">This area is reserved for a future focused view. v0.1 keeps daily tracking on the Today dashboard.</p></section>
@@ -192,16 +199,21 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
   </div>
   <dialog id="entryModal"><form method="dialog" class="modal-body" id="modalForm"><h2 id="modalTitle"></h2><div id="modalFields"></div><div class="modal-actions"><button class="ghost-btn" value="cancel" type="button" id="cancelModal">Cancel</button><button class="action-btn" value="default" type="submit">Save entry</button></div></form></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // ===== state =====
     const ENTRY_KEY = "caregiverCompanion_entries";
     const SETTINGS_KEY = "caregiverCompanion_settings";
+    const SUPABASE_URL = window.CAREGIVER_SUPABASE_URL || "";
+    const SUPABASE_ANON_KEY = window.CAREGIVER_SUPABASE_ANON_KEY || "";
     const defaultSettings = { personName: "Muhammad", waterGoal: 3, teethGoal: 2, enemaWeeklyGoal: 2 };
     let entries = [];
     let settings = { ...defaultSettings };
     let activeModalType = null;
     let editingEntryId = null;
     let timelineMode = "today";
+    let supabaseClient = null;
+    let currentUser = null;
     const navItems = ["🏠 Today", "🍼 Feeding & Hydration", "🩲 Diapers", "🪥 Hygiene", "🍎 Food Log", "🚶 Activity & Positioning", "🌡️ Health & Meds", "📅 Appointments", "📦 Supplies", "📝 Concerns & Notes", "👤 Contacts", "📊 Reports", "⚙️ Settings", "? Help"];
     const eventMeta = { shake: ["🍼", "Shake"], water: ["💧", "Water"], food: ["🍎", "Food"], pee: ["💦", "Pee"], poopy: ["💩", "Poopy"], wake: ["☀️", "Wake Up"], note: ["📝", "Note"], mood: ["😊", "Mood"], teeth: ["🪥", "Teeth Brushed"], bath: ["🛁", "Bath"], laundry: ["🧺", "Laundry"], nails: ["✂️", "Nails Clipped"], lotion: ["🧴", "Lotion"], miralax: ["🥤", "Miralax"], enema: ["⚕️", "Enema"] };
 
@@ -215,12 +227,40 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function saveEntries() { localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); }
     function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 
-    // ===== future sync placeholders =====
-    const syncAdapter = {
-      status: "local-only",
-      async pull() { /* Future v1.0: Supabase Auth + select care_entries/care_settings where user_id = auth.uid(). */ },
-      async push() { /* Future v1.0: upsert rows with user_id set server-side/scoped by RLS to auth.uid(). */ }
-    };
+    // ===== optional Supabase email login + sync =====
+    function syncConfigured() { return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase); }
+    function updateSyncStatus(message) { const status = document.getElementById("syncStatus"); if (status) status.textContent = message; }
+    async function initSync() {
+      if (!syncConfigured()) { updateSyncStatus("Email sync needs Supabase URL/key setup before it can work across devices. Local tracking still works on this device."); return; }
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data } = await supabaseClient.auth.getSession();
+      currentUser = data.session?.user || null;
+      updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Enter your email to receive a login link for sync.");
+      supabaseClient.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Signed out. Local tracking still works on this device."); if (currentUser) syncNow(); });
+      if (currentUser) await syncNow();
+    }
+    async function sendLoginLink() {
+      if (!syncConfigured()) { updateSyncStatus("Email sync is not configured yet. Add Supabase URL/key to enable login."); return; }
+      const email = value("syncEmail");
+      if (!email) { updateSyncStatus("Enter an email address first."); return; }
+      const { error } = await supabaseClient.auth.signInWithOtp({ email });
+      updateSyncStatus(error ? `Login link error: ${error.message}` : "Check your email for the login link.");
+    }
+    async function signOut() { if (!supabaseClient) return; await supabaseClient.auth.signOut(); currentUser = null; updateSyncStatus("Signed out. Local tracking still works on this device."); }
+    async function syncNow() {
+      if (!supabaseClient || !currentUser) { updateSyncStatus(syncConfigured() ? "Sign in before syncing." : "Email sync is not configured yet."); return; }
+      updateSyncStatus("Syncing entries…");
+      const localRows = entries.map(entry => ({ ...entry, user_id: currentUser.id }));
+      if (localRows.length) { const { error: pushError } = await supabaseClient.from("care_entries").upsert(localRows, { onConflict: "id" }); if (pushError) { updateSyncStatus(`Sync error: ${pushError.message}`); return; } }
+      const { data, error } = await supabaseClient.from("care_entries").select("*").eq("user_id", currentUser.id);
+      if (error) { updateSyncStatus(`Sync error: ${error.message}`); return; }
+      const merged = new Map(entries.map(entry => [entry.id, entry]));
+      (data || []).map(normalizeEvent).filter(Boolean).forEach(entry => merged.set(entry.id, entry));
+      entries = [...merged.values()];
+      saveEntries();
+      render();
+      updateSyncStatus(`Synced ${entries.length} entries as ${currentUser.email}.`);
+    }
 
     // ===== event creation =====
     function createEvent(type, details = {}, timestamp = new Date()) {
@@ -252,7 +292,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       render();
       showToast("All app data cleared");
     }
-    function persistAndRender(message) { saveEntries(); render(); showToast(message); }
+    function persistAndRender(message) { saveEntries(); render(); showToast(message); if (currentUser) syncNow(); }
 
     // ===== summary calculations =====
     function todayEntries() { const today = localDateKey(new Date()); return entries.filter(entry => localDateKey(new Date(entry.timestamp)) === today).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)); }
@@ -282,7 +322,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function renderQuickLog() { const groups = [
       { title: "Feeding", buttons: [["shake", "🍼", "Shake"], ["water", "💧", "Water"], ["food", "🍏", "Food", true], ["miralax", "🥤", "Miralax"]] },
       { title: "Toileting & Diapers", buttons: [["pee", "🩲", "Pee"], ["poopy", "💩", "Poopy"], ["enema", "⚕️", "Enema"]] },
-      { title: "Daily Care", buttons: [["wake", "☀️", "Wake Up", true], ["mood", "😊", "Mood", true], ["teeth", "🪥", "Teeth"], ["bath", "🛁", "Bath"], ["lotion", "🧴", "Lotion"], ["nails", "✂️", "Nails"]] },
+      { title: "Daily Care", buttons: [["wake", "☀️", "Wake Up", true], ["mood", "😊", "Mood", true], ["note", "📝", "Note", true], ["teeth", "🪥", "Teeth"], ["bath", "🛁", "Bath"], ["lotion", "🧴", "Lotion"], ["nails", "✂️", "Nails"]] },
       { title: "Household", buttons: [["laundry", "🧺", "Laundry", true]] }
     ]; document.getElementById("quickLog").innerHTML = groups.map(group => `<div class="quick-group"><h3>${group.title}</h3><div class="quick-buttons">${group.buttons.map(([type, icon, text, modal]) => `<button class="action-btn" data-type="${type}" data-modal="${modal ? "true" : "false"}"><span class="quick-icon">${icon}</span><span>+ ${icon} ${text}</span></button>`).join("")}</div></div>`).join(""); }
     function renderTimeline() {
@@ -382,9 +422,13 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     document.getElementById("clearTodayButton").addEventListener("click", () => { timelineMode = timelineMode === "all" ? "today" : "all"; renderTimeline(); document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }); });
     document.getElementById("clearWeekButton").addEventListener("click", clearThisWeeksData);
     document.getElementById("clearAllDataButton").addEventListener("click", clearAllAppData);
+    document.getElementById("emailLoginButton").addEventListener("click", sendLoginLink);
+    document.getElementById("syncNowButton").addEventListener("click", syncNow);
+    document.getElementById("signOutButton").addEventListener("click", signOut);
 
     loadStorage();
     render();
+    initSync();
   </script>
 </body>
 </html>

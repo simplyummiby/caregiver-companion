@@ -191,13 +191,13 @@ Local-first storage with optional Supabase email login/sync when configured; no 
         </div>
         <section class="panel"><div class="section-title"><div><h2>Today’s Summary</h2></div></div><div class="summary-grid" id="summaryGrid" aria-label="Today's summary"></div></section>
         <section class="panel"><div class="section-title"><div><h2>Quick Add</h2><p>Tap a compact button to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
-        <section class="panel sync-panel"><div class="section-title"><div><h2>Email Login & Sync</h2><p>Sign in to sync entries across your devices when Supabase is configured.</p></div></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p></section>
         <section class="panel"><div class="section-title"><div><h2 id="timelineTitle">Today’s Timeline</h2><p id="timelineSubtitle">All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools for this local device only. Use these if old localStorage entries, such as a weekly Enema count, are stuck.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all local app data</button></div></section>
       </section>
       <section class="panel placeholder-page" id="placeholderView"><h2 id="placeholderTitle"></h2><p class="muted">This area is reserved for a future focused view. v0.1 keeps daily tracking on the Today dashboard.</p></section>
     </main>
   </div>
   <dialog id="entryModal"><form method="dialog" class="modal-body" id="modalForm"><h2 id="modalTitle"></h2><div id="modalFields"></div><div class="modal-actions"><button class="ghost-btn" value="cancel" type="button" id="cancelModal">Cancel</button><button class="action-btn" value="default" type="submit">Save entry</button></div></form></dialog>
+  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured.</p><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -214,7 +214,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     let timelineMode = "today";
     let supabaseClient = null;
     let currentUser = null;
-    const navItems = ["🏠 Today", "🍼 Feeding & Hydration", "🩲 Diapers", "🪥 Hygiene", "🍎 Food Log", "🚶 Activity & Positioning", "🌡️ Health & Meds", "📅 Appointments", "📦 Supplies", "📝 Concerns & Notes", "👤 Contacts", "📊 Reports", "⚙️ Settings", "? Help"];
+    const navItems = ["🏠 Today", "🍼 Feeding & Hydration", "🩲 Diapers", "🪥 Hygiene", "🍎 Food Log", "🚶 Activity & Positioning", "🌡️ Health & Meds", "📅 Appointments", "📦 Supplies", "📝 Concerns & Notes", "👤 Contacts", "📊 Reports", "🔐 Account", "⚙️ Settings", "? Help"];
     const eventMeta = { shake: ["🍼", "Shake"], water: ["💧", "Water"], food: ["🍎", "Food"], pee: ["💦", "Pee"], poopy: ["💩", "Poopy"], wake: ["☀️", "Wake Up"], note: ["📝", "Note"], mood: ["😊", "Mood"], teeth: ["🪥", "Teeth Brushed"], bath: ["🛁", "Bath"], laundry: ["🧺", "Laundry"], nails: ["✂️", "Nails Clipped"], lotion: ["🧴", "Lotion"], miralax: ["🥤", "Miralax"], enema: ["⚕️", "Enema"] };
 
     // ===== storage =====
@@ -413,7 +413,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
       const quick = event.target.closest("[data-type]"); if (quick) { quick.dataset.modal === "true" ? openEntryModal(quick.dataset.type) : addInstant(quick.dataset.type); }
       const edit = event.target.closest("[data-edit]"); if (edit) openEditModal(edit.dataset.edit);
       const del = event.target.closest("[data-delete]"); if (del && confirm("Delete this entry?")) deleteEntry(del.dataset.delete);
-      const page = event.target.closest("[data-page]"); if (page) { document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
+      const page = event.target.closest("[data-page]"); if (page) { if (page.dataset.page === "Account") { document.getElementById("accountModal").showModal(); document.body.classList.remove("drawer-open"); return; } document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
     });
     document.getElementById("menuButton").addEventListener("click", () => document.body.classList.add("drawer-open"));
     document.getElementById("drawerScrim").addEventListener("click", () => document.body.classList.remove("drawer-open"));
@@ -425,6 +425,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     document.getElementById("emailLoginButton").addEventListener("click", sendLoginLink);
     document.getElementById("syncNowButton").addEventListener("click", syncNow);
     document.getElementById("signOutButton").addEventListener("click", signOut);
+    document.getElementById("closeAccountButton").addEventListener("click", () => document.getElementById("accountModal").close());
 
     loadStorage();
     render();

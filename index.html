@@ -123,6 +123,8 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .danger-btn { color: var(--danger); background: #fff0f4; border: 1px solid #ffd1dc; padding: 7px 10px; font-size: .82rem; }
     .edit-btn { color: var(--primary); background: #f4efff; border: 1px solid #dacdfb; padding: 7px 10px; border-radius: 16px; font-weight: 900; font-size: .82rem; }
     .timeline-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .data-reset { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .data-reset p { flex: 1 1 240px; margin: 0; color: var(--muted); font-size: .92rem; }
     .timeline-wrap { position: relative; display:grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items:start; }
     .timeline { display: grid; gap: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.65); }
     .timeline-item { display: grid; grid-template-columns: 92px 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ebe6f5; background: rgba(255,255,255,.42); }
@@ -158,6 +160,8 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       .quick-log { grid-template-columns: 1fr; }
       .timeline-item { grid-template-columns: 70px 34px 1fr; }
       .timeline-actions { grid-column: 3; justify-content:flex-start; }
+      .data-reset { align-items: stretch; }
+      .data-reset .danger-btn { width: 100%; }
     }
   </style>
 </head>
@@ -178,7 +182,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
         </div>
         <section class="panel"><div class="section-title"><div><h2>Today’s Summary</h2></div></div><div class="summary-grid" id="summaryGrid" aria-label="Today's summary"></div></section>
         <section class="panel"><div class="section-title"><div><h2>Quick Add</h2><p>Tap a compact button to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
-        <section class="panel"><div class="section-title"><div><h2>Today’s Timeline</h2><p>All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div></section>
+        <section class="panel"><div class="section-title"><div><h2>Today’s Timeline</h2><p>All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools for this local device only. Use these if old localStorage entries are stuck.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all app data</button></div></section>
       </section>
       <section class="panel placeholder-page" id="placeholderView"><h2 id="placeholderTitle"></h2><p class="muted">This area is reserved for a future focused view. v0.1 keeps daily tracking on the Today dashboard.</p></section>
     </main>
@@ -224,6 +228,26 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function addInstant(type) { entries.push(createEvent(type)); persistAndRender(`${labelFor(type)} added`); }
     function addDetailed(type, details) { entries.push(createEvent(type, details)); persistAndRender(`${labelFor(type)} saved`); }
     function deleteEntry(id) { entries = entries.filter(entry => entry.id !== id); persistAndRender("Entry deleted"); }
+    function clearThisWeeksData() {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0,0,0,0);
+      const removedCount = entries.filter(entry => new Date(entry.timestamp) >= start).length;
+      if (!confirm(`Clear ${removedCount} entries from this week on this device? This cannot be undone.`)) return;
+      entries = entries.filter(entry => new Date(entry.timestamp) < start);
+      persistAndRender("This week’s data cleared");
+    }
+    function clearAllAppData() {
+      if (!confirm("Clear ALL Caregiver Companion data on this device, including entries and settings? This cannot be undone.")) return;
+      localStorage.removeItem(ENTRY_KEY);
+      localStorage.removeItem(SETTINGS_KEY);
+      entries = [];
+      settings = { ...defaultSettings };
+      saveSettings();
+      render();
+      showToast("All app data cleared");
+    }
     function persistAndRender(message) { saveEntries(); render(); showToast(message); }
 
     // ===== summary calculations =====
@@ -300,7 +324,6 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
         const mood = value("wakeMood");
         const wakeDate = dateWithTime(value("wakeTime"));
         entries.push(createEvent("wake", { mood, moodEmoji: mood ? "😊" : undefined }, wakeDate));
-        if (mood) entries.push(createEvent("mood", { mood, moodEmoji: "😊", source: "wake" }, wakeDate));
         persistAndRender("Wake up saved");
       }
       if (activeModalType === "laundry") {
@@ -347,6 +370,8 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     document.getElementById("cancelModal").addEventListener("click", closeModal);
     document.getElementById("modalForm").addEventListener("submit", submitModal);
     document.getElementById("clearTodayButton").addEventListener("click", () => document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }));
+    document.getElementById("clearWeekButton").addEventListener("click", clearThisWeeksData);
+    document.getElementById("clearAllDataButton").addEventListener("click", clearAllAppData);
 
     loadStorage();
     render();

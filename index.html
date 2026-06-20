@@ -209,6 +209,21 @@ Local-first storage with optional Supabase email login/sync when configured; no 
   <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured. If the app-wide config is filled in, you only need to enter your email here.</p><div class="field"><label for="supabaseUrlInput">Supabase Project URL</label><input id="supabaseUrlInput" type="url" placeholder="https://your-project.supabase.co" autocomplete="off" /></div><div class="field"><label for="supabaseKeyInput">Supabase publishable key</label><input id="supabaseKeyInput" type="password" placeholder="sb_publishable_..." autocomplete="off" /></div><div class="sync-actions"><button class="ghost-btn" id="saveSyncConfigButton" type="button">Save sync settings</button></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
   <dialog id="settingsModal"><div class="modal-body"><h2>Settings</h2><div class="field"><label for="clientNameInput">Client name</label><input id="clientNameInput" placeholder="Person you are caregiving" autocomplete="name" /></div><p class="sync-status">This name appears on the Today dashboard after sign-in.</p><div class="modal-actions"><button class="ghost-btn" id="closeSettingsButton" type="button">Close</button><button class="action-btn" id="saveClientButton" type="button">Save client</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Optional app-wide Supabase config. Use the Project URL and publishable key, never a secret/service-role key.
+    // Filling these once in the deployed app means each device only needs the email login step.
+    window.CAREGIVER_SUPABASE_URL = "";
+    window.CAREGIVER_SUPABASE_ANON_KEY = "";
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Optional app-wide Supabase config. Use the Project URL and publishable key, never a secret/service-role key.
+    // Filling these once in the deployed app means each device only needs the email login step.
+    window.CAREGIVER_SUPABASE_URL = "";
+    window.CAREGIVER_SUPABASE_ANON_KEY = "";
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // Optional app-wide Supabase config. Use the Project URL and publishable key, never a secret/service-role key.
     // Filling these once in the deployed app means each device only needs the email login step.

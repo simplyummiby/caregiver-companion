@@ -197,13 +197,15 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     </main>
   </div>
   <dialog id="entryModal"><form method="dialog" class="modal-body" id="modalForm"><h2 id="modalTitle"></h2><div id="modalFields"></div><div class="modal-actions"><button class="ghost-btn" value="cancel" type="button" id="cancelModal">Cancel</button><button class="action-btn" value="default" type="submit">Save entry</button></div></form></dialog>
-  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured.</p><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
+  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured.</p><div class="field"><label for="supabaseUrlInput">Supabase Project URL</label><input id="supabaseUrlInput" type="url" placeholder="https://your-project.supabase.co" autocomplete="off" /></div><div class="field"><label for="supabaseKeyInput">Supabase publishable key</label><input id="supabaseKeyInput" type="password" placeholder="sb_publishable_..." autocomplete="off" /></div><div class="sync-actions"><button class="ghost-btn" id="saveSyncConfigButton" type="button">Save sync settings</button></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // ===== state =====
     const ENTRY_KEY = "caregiverCompanion_entries";
     const SETTINGS_KEY = "caregiverCompanion_settings";
+    const SUPABASE_URL_KEY = "caregiverCompanion_supabase_url";
+    const SUPABASE_ANON_KEY_KEY = "caregiverCompanion_supabase_anon_key";
     const SUPABASE_URL = window.CAREGIVER_SUPABASE_URL || "";
     const SUPABASE_ANON_KEY = window.CAREGIVER_SUPABASE_ANON_KEY || "";
     const defaultSettings = { personName: "Muhammad", waterGoal: 3, teethGoal: 2, enemaWeeklyGoal: 2 };
@@ -228,11 +230,18 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 
     // ===== optional Supabase email login + sync =====
-    function syncConfigured() { return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase); }
+    function configuredSupabaseUrl() { return localStorage.getItem(SUPABASE_URL_KEY) || SUPABASE_URL; }
+    function configuredSupabaseKey() { return localStorage.getItem(SUPABASE_ANON_KEY_KEY) || SUPABASE_ANON_KEY; }
+    function syncSetupMessage() { if (!configuredSupabaseUrl()) return "Missing Supabase Project URL. Paste it above and save sync settings."; if (!configuredSupabaseKey()) return "Missing Supabase publishable key. Paste it above and save sync settings."; if (!window.supabase) return "Supabase client script has not loaded yet. Check your connection and try again."; return ""; }
+    function syncConfigured() { return !syncSetupMessage(); }
     function updateSyncStatus(message) { const status = document.getElementById("syncStatus"); if (status) status.textContent = message; }
+    function populateSyncConfigFields() { const url = document.getElementById("supabaseUrlInput"); const key = document.getElementById("supabaseKeyInput"); if (url) url.value = configuredSupabaseUrl(); if (key) key.value = configuredSupabaseKey(); }
+    function saveSyncConfig() { localStorage.setItem(SUPABASE_URL_KEY, value("supabaseUrlInput")); localStorage.setItem(SUPABASE_ANON_KEY_KEY, value("supabaseKeyInput")); supabaseClient = null; updateSyncStatus("Sync settings saved. You can now send a login link."); initSync(); }
     async function initSync() {
-      if (!syncConfigured()) { updateSyncStatus("Email sync needs Supabase URL/key setup before it can work across devices. Local tracking still works on this device."); return; }
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      populateSyncConfigFields();
+      const setupMessage = syncSetupMessage();
+      if (setupMessage) { updateSyncStatus(`${setupMessage} Local tracking still works on this device.`); return; }
+      if (!supabaseClient) supabaseClient = window.supabase.createClient(configuredSupabaseUrl(), configuredSupabaseKey());
       const { data } = await supabaseClient.auth.getSession();
       currentUser = data.session?.user || null;
       updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Enter your email to receive a login link for sync.");
@@ -240,7 +249,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
       if (currentUser) await syncNow();
     }
     async function sendLoginLink() {
-      if (!syncConfigured()) { updateSyncStatus("Email sync is not configured yet. Add Supabase URL/key to enable login."); return; }
+      if (!syncConfigured()) { updateSyncStatus(syncSetupMessage()); return; }
       const email = value("syncEmail");
       if (!email) { updateSyncStatus("Enter an email address first."); return; }
       const { error } = await supabaseClient.auth.signInWithOtp({ email });
@@ -248,7 +257,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     }
     async function signOut() { if (!supabaseClient) return; await supabaseClient.auth.signOut(); currentUser = null; updateSyncStatus("Signed out. Local tracking still works on this device."); }
     async function syncNow() {
-      if (!supabaseClient || !currentUser) { updateSyncStatus(syncConfigured() ? "Sign in before syncing." : "Email sync is not configured yet."); return; }
+      if (!supabaseClient || !currentUser) { updateSyncStatus(syncConfigured() ? "Sign in before syncing." : syncSetupMessage()); return; }
       updateSyncStatus("Syncing entries…");
       const localRows = entries.map(entry => ({ ...entry, user_id: currentUser.id }));
       if (localRows.length) { const { error: pushError } = await supabaseClient.from("care_entries").upsert(localRows, { onConflict: "id" }); if (pushError) { updateSyncStatus(`Sync error: ${pushError.message}`); return; } }
@@ -413,7 +422,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
       const quick = event.target.closest("[data-type]"); if (quick) { quick.dataset.modal === "true" ? openEntryModal(quick.dataset.type) : addInstant(quick.dataset.type); }
       const edit = event.target.closest("[data-edit]"); if (edit) openEditModal(edit.dataset.edit);
       const del = event.target.closest("[data-delete]"); if (del && confirm("Delete this entry?")) deleteEntry(del.dataset.delete);
-      const page = event.target.closest("[data-page]"); if (page) { if (page.dataset.page === "Account") { initSync(); document.getElementById("accountModal").showModal(); document.body.classList.remove("drawer-open"); return; } document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
+      const page = event.target.closest("[data-page]"); if (page) { if (page.dataset.page === "Account") { populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); document.body.classList.remove("drawer-open"); return; } document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
     });
     document.getElementById("menuButton").addEventListener("click", () => document.body.classList.add("drawer-open"));
     document.getElementById("drawerScrim").addEventListener("click", () => document.body.classList.remove("drawer-open"));
@@ -422,6 +431,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     document.getElementById("clearTodayButton").addEventListener("click", () => { timelineMode = timelineMode === "all" ? "today" : "all"; renderTimeline(); document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }); });
     document.getElementById("clearWeekButton").addEventListener("click", clearThisWeeksData);
     document.getElementById("clearAllDataButton").addEventListener("click", clearAllAppData);
+    document.getElementById("saveSyncConfigButton").addEventListener("click", saveSyncConfig);
     document.getElementById("emailLoginButton").addEventListener("click", sendLoginLink);
     document.getElementById("syncNowButton").addEventListener("click", syncNow);
     document.getElementById("signOutButton").addEventListener("click", signOut);

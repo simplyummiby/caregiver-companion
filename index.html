@@ -252,8 +252,9 @@ Local-first storage with optional Supabase email login/sync when configured; no 
       if (!syncConfigured()) { updateSyncStatus(syncSetupMessage()); return; }
       const email = value("syncEmail");
       if (!email) { updateSyncStatus("Enter an email address first."); return; }
-      const { error } = await supabaseClient.auth.signInWithOtp({ email });
-      updateSyncStatus(error ? `Login link error: ${error.message}` : "Check your email for the login link.");
+      const redirectTo = window.location.href.split(/[?#]/)[0];
+      const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+      updateSyncStatus(error ? `Login link error: ${error.message}` : `Check your email for the login link. It will return to ${redirectTo}`);
     }
     async function signOut() { if (!supabaseClient) return; await supabaseClient.auth.signOut(); currentUser = null; updateSyncStatus("Signed out. Local tracking still works on this device."); }
     async function syncNow() {

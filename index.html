@@ -200,13 +200,13 @@ Local-first storage with optional Supabase email login/sync when configured; no 
         </div>
         <section class="panel"><div class="section-title"><div><h2>Today’s Summary</h2></div></div><div class="summary-grid" id="summaryGrid" aria-label="Today's summary"></div></section>
         <section class="panel"><div class="section-title"><div><h2>Quick Add</h2><p>Tap a compact button to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
-        <section class="panel"><div class="section-title"><div><h2 id="timelineTitle">Today’s Timeline</h2><p id="timelineSubtitle">All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools for this local device only. Use these if old localStorage entries, such as a weekly Enema count, are stuck.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all local app data</button></div></section>
+        <section class="panel"><div class="section-title"><div><h2 id="timelineTitle">Today’s Timeline</h2><p id="timelineSubtitle">All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools. If you are signed in, these also clear matching synced Supabase entries so old data does not come back on the next sync.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all saved data</button></div></section>
       </section>
       <section class="panel placeholder-page" id="placeholderView"><h2 id="placeholderTitle"></h2><p class="muted">This area is reserved for a future focused view. v0.1 keeps daily tracking on the Today dashboard.</p></section>
     </main>
   </div>
   <dialog id="entryModal"><form method="dialog" class="modal-body" id="modalForm"><h2 id="modalTitle"></h2><div id="modalFields"></div><div class="modal-actions"><button class="ghost-btn" value="cancel" type="button" id="cancelModal">Cancel</button><button class="action-btn" value="default" type="submit">Save entry</button></div></form></dialog>
-  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured. If the app-wide config is filled in, you only need to enter your email here.</p><div class="field"><label for="supabaseUrlInput">Supabase Project URL</label><input id="supabaseUrlInput" type="url" placeholder="https://your-project.supabase.co" autocomplete="off" /></div><div class="field"><label for="supabaseKeyInput">Supabase publishable key</label><input id="supabaseKeyInput" type="password" placeholder="sb_publishable_..." autocomplete="off" /></div><div class="sync-actions"><button class="ghost-btn" id="saveSyncConfigButton" type="button">Save sync settings</button></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
+  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Enter your email and Supabase will send a magic login link. No password is needed.</p><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
   <dialog id="settingsModal"><div class="modal-body"><h2>Settings</h2><div class="field"><label for="clientNameInput">Client name</label><input id="clientNameInput" placeholder="Person you are caregiving" autocomplete="name" /></div><p class="sync-status">This name appears on the Today dashboard after sign-in.</p><div class="modal-actions"><button class="ghost-btn" id="closeSettingsButton" type="button">Close</button><button class="action-btn" id="saveClientButton" type="button">Save client</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -232,6 +232,13 @@ Local-first storage with optional Supabase email login/sync when configured; no 
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // Optional app-wide Supabase config. Use the Project URL and publishable key, never a secret/service-role key.
+    // Filling these once in the deployed app means each device only needs the email login step.
+    window.CAREGIVER_SUPABASE_URL = "https://yhujmxfodajeghdvfqar.supabase.co";
+    window.CAREGIVER_SUPABASE_ANON_KEY = "sb_publishable_mdTULpg76CScYYMUNkBqXQ___XPVLFH";
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
     // ===== state =====
     const ENTRY_KEY = "caregiverCompanion_entries";
     const SETTINGS_KEY = "caregiverCompanion_settings";
@@ -245,6 +252,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     let activeModalType = null;
     let editingEntryId = null;
     let timelineMode = "today";
+    let lastQuickAction = { type: null, at: 0 };
     let supabaseClient = null;
     let currentUser = null;
     const navItems = ["🏠 Today", "🍼 Feeding & Hydration", "🩲 Diapers", "🪥 Hygiene", "🍎 Food Log", "🚶 Activity & Positioning", "🌡️ Health & Meds", "📅 Appointments", "📦 Supplies", "📝 Concerns & Notes", "👤 Contacts", "📊 Reports", "🔐 Account", "⚙️ Settings", "? Help"];
@@ -264,13 +272,12 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     function saveClientSettings() { settings.personName = value("clientNameInput") || defaultSettings.personName; saveSettings(); render(); showToast("Client saved"); }
 
     // ===== optional Supabase email login + sync =====
-    function configuredSupabaseUrl() { return localStorage.getItem(SUPABASE_URL_KEY) || SUPABASE_URL; }
-    function configuredSupabaseKey() { return localStorage.getItem(SUPABASE_ANON_KEY_KEY) || SUPABASE_ANON_KEY; }
+    function configuredSupabaseUrl() { return SUPABASE_URL || localStorage.getItem(SUPABASE_URL_KEY) || ""; }
+    function configuredSupabaseKey() { return SUPABASE_ANON_KEY || localStorage.getItem(SUPABASE_ANON_KEY_KEY) || ""; }
     function syncSetupMessage() { if (!configuredSupabaseUrl()) return "Missing Supabase Project URL. Paste it above and save sync settings."; if (!configuredSupabaseKey()) return "Missing Supabase publishable key. Paste it above and save sync settings."; if (!window.supabase) return "Supabase client script has not loaded yet. Check your connection and try again."; return ""; }
     function syncConfigured() { return !syncSetupMessage(); }
     function updateSyncStatus(message) { const status = document.getElementById("syncStatus"); if (status) status.textContent = message; }
-    function populateSyncConfigFields() { const url = document.getElementById("supabaseUrlInput"); const key = document.getElementById("supabaseKeyInput"); if (url) url.value = configuredSupabaseUrl(); if (key) key.value = configuredSupabaseKey(); }
-    function saveSyncConfig() { localStorage.setItem(SUPABASE_URL_KEY, value("supabaseUrlInput")); localStorage.setItem(SUPABASE_ANON_KEY_KEY, value("supabaseKeyInput")); supabaseClient = null; updateSyncStatus("Sync settings saved. You can now send a login link."); initSync(); }
+    function populateSyncConfigFields() { /* App-wide Supabase config is embedded above; kept for backwards compatibility with saved local overrides. */ }
     async function initSync() {
       populateSyncConfigFields();
       const setupMessage = syncSetupMessage();
@@ -317,18 +324,30 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     function addInstant(type) { entries.push(createEvent(type)); persistAndRender(`${labelFor(type)} added`); }
     function addDetailed(type, details) { entries.push(createEvent(type, details)); persistAndRender(`${labelFor(type)} saved`); }
     function deleteEntry(id) { entries = entries.filter(entry => entry.id !== id); persistAndRender("Entry deleted"); }
-    function clearThisWeeksData() {
+    async function clearThisWeeksData() {
       const now = new Date();
       const start = new Date(now);
       start.setDate(now.getDate() - now.getDay());
       start.setHours(0,0,0,0);
       const removedCount = entries.filter(entry => new Date(entry.timestamp) >= start).length;
-      if (!confirm(`Clear ${removedCount} entries from this week on this device? This cannot be undone.`)) return;
+      const scope = currentUser ? "on this device and in synced Supabase data" : "on this device";
+      if (!confirm(`Clear ${removedCount} entries from this week ${scope}? This cannot be undone.`)) return;
+      if (supabaseClient && currentUser) {
+        const { error } = await supabaseClient.from("care_entries").delete().eq("user_id", currentUser.id).gte("timestamp", start.toISOString());
+        if (error) { updateSyncStatus(`Clear synced data error: ${error.message}`); return; }
+      }
       entries = entries.filter(entry => new Date(entry.timestamp) < start);
-      persistAndRender("This week’s data cleared");
+      saveEntries();
+      render();
+      showToast("This week’s data cleared");
     }
-    function clearAllAppData() {
-      if (!confirm("Clear ALL Caregiver Companion data on this device, including entries and settings? This cannot be undone.")) return;
+    async function clearAllAppData() {
+      const scope = currentUser ? "on this device and in synced Supabase data" : "on this device";
+      if (!confirm(`Clear ALL Caregiver Companion entries and settings ${scope}? This cannot be undone.`)) return;
+      if (supabaseClient && currentUser) {
+        const { error } = await supabaseClient.from("care_entries").delete().eq("user_id", currentUser.id);
+        if (error) { updateSyncStatus(`Clear synced data error: ${error.message}`); return; }
+      }
       localStorage.removeItem(ENTRY_KEY);
       localStorage.removeItem(SETTINGS_KEY);
       entries = [];
@@ -338,6 +357,13 @@ Local-first storage with optional Supabase email login/sync when configured; no 
       showToast("All app data cleared");
     }
     function persistAndRender(message) { saveEntries(); render(); showToast(message); if (currentUser) syncNow(); }
+    function handleQuickAction(quick) {
+      const type = quick.dataset.type;
+      const now = Date.now();
+      if (lastQuickAction.type === type && now - lastQuickAction.at < 900) return;
+      lastQuickAction = { type, at: now };
+      quick.dataset.modal === "true" ? openEntryModal(type) : addInstant(type);
+    }
 
     // ===== summary calculations =====
     function todayEntries() { const today = localDateKey(new Date()); return entries.filter(entry => localDateKey(new Date(entry.timestamp)) === today).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)); }
@@ -455,7 +481,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
 
     // ===== event listeners =====
     document.addEventListener("click", event => {
-      const quick = event.target.closest("[data-type]"); if (quick) { quick.dataset.modal === "true" ? openEntryModal(quick.dataset.type) : addInstant(quick.dataset.type); }
+      const quick = event.target.closest("[data-type]"); if (quick) { event.preventDefault(); event.stopPropagation(); handleQuickAction(quick); return; }
       const edit = event.target.closest("[data-edit]"); if (edit) openEditModal(edit.dataset.edit);
       const del = event.target.closest("[data-delete]"); if (del && confirm("Delete this entry?")) deleteEntry(del.dataset.delete);
       const page = event.target.closest("[data-page]"); if (page) { if (page.dataset.page === "Account") { populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); document.body.classList.remove("drawer-open"); return; } if (page.dataset.page === "Settings") { populateClientFields(); document.getElementById("settingsModal").showModal(); document.body.classList.remove("drawer-open"); return; } document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
@@ -470,7 +496,6 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     document.getElementById("landingAccountButton").addEventListener("click", () => { populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); });
     document.getElementById("saveClientButton").addEventListener("click", saveClientSettings);
     document.getElementById("closeSettingsButton").addEventListener("click", () => document.getElementById("settingsModal").close());
-    document.getElementById("saveSyncConfigButton").addEventListener("click", saveSyncConfig);
     document.getElementById("emailLoginButton").addEventListener("click", sendLoginLink);
     document.getElementById("syncNowButton").addEventListener("click", syncNow);
     document.getElementById("signOutButton").addEventListener("click", signOut);

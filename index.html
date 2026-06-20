@@ -5,8 +5,8 @@ Date: June 19, 2026
 What was added:
 - Single-page responsive daily caregiving tracker for Muhammad.
 - Local-first event log using localStorage keys caregiverCompanion_entries and caregiverCompanion_settings.
-- Today dashboard with mockup-level visual polish, wake/mood status cards, updated care summary tiles, grouped quick actions, editable timeline times, and deleteable timeline.
-- Future Supabase sync placeholders and event shape aligned to planned care_entries and care_settings tables.
+- Today dashboard with mockup-level visual polish, wake/mood status cards, updated care summary tiles, grouped Quick Add buttons, editable timeline times, and deleteable timeline.
+- Optional Supabase email login/sync wiring with local-first fallback and event shape aligned to planned care_entries table.
 
 What changed:
 - Rebuilt the app as a focused v0.1 plain HTML/CSS/vanilla JavaScript implementation.
@@ -24,7 +24,7 @@ Update Caregiver Companion dashboard cards and quick logs
 --
 Add requested wake/mood status, care summary cards, grouped quick log actions, laundry load details, wake-up mood/time capture, and editable timeline times while keeping local-first storage.
 --
-Local storage only; no auth, payments, sharing, provider portal, or cloud sync implemented.
+Local-first storage with optional Supabase email login/sync when configured; no payments, sharing, provider portal, or medical-record workflows implemented.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -66,6 +66,14 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     }
     button, input, textarea, select { font: inherit; }
     button { cursor: pointer; }
+    .landing { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    .landing-card { width: min(680px, 100%); padding: 34px; text-align: center; }
+    .landing-card h1 { margin: 12px 0; font-size: clamp(2.1rem, 6vw, 4rem); letter-spacing: -.05em; }
+    .landing-card p { color: var(--muted); font-size: 1.05rem; line-height: 1.55; }
+    .landing-icon { width: 76px; height: 76px; margin: 0 auto; border-radius: 26px; display:grid; place-items:center; background: linear-gradient(135deg, #8a5cff, #4527a0); color:#fff; font-size: 2.4rem; box-shadow: var(--small-shadow); }
+    .landing-actions { display:flex; gap: 12px; justify-content:center; flex-wrap:wrap; margin-top: 22px; }
+    body.signed-in .landing { display:none; }
+    body:not(.signed-in) .app-shell { display:none; }
     .app-shell { min-height: 100vh; display: flex; }
     .sidebar {
       position: fixed; inset: 0 auto 0 0; width: 280px; padding: 26px 18px;
@@ -76,6 +84,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .brand-icon { width: 54px; height: 54px; border-radius: 19px; display: grid; place-items: center; background: linear-gradient(135deg, #8a5cff, #4527a0); font-size: 1.8rem; box-shadow: 0 14px 30px rgba(0,0,0,.22); }
     .brand strong { display: block; font-size: 1.32rem; line-height: 1.14; letter-spacing: -.02em; }
     .brand span { display:block; margin-top: 4px; color: #d9d3ff; font-size: .82rem; }
+    .release-label { width: fit-content; margin-top: 8px !important; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff !important; font-weight: 900; letter-spacing: .01em; }
     .nav { display: grid; gap: 8px; }
     .nav button { border: 0; border-radius: 10px; padding: 13px 14px; text-align: left; color: #f4f0ff; background: transparent; display:flex; gap:12px; align-items:center; font-size: 1.02rem; }
     .nav button::first-letter { font-size: 1.1em; }
@@ -105,34 +114,40 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     .section-title { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-bottom: 16px; }
     .section-title h2 { margin: 0; color: #32159a; font-size: 1.05rem; letter-spacing: .03em; text-transform: uppercase; }
     .section-title p { margin: 5px 0 0; color: var(--muted); }
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 14px; }
-    .summary-card { min-height: 142px; padding: 16px 10px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:none; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .summary-section { display: grid; gap: 10px; align-content:start; }
+    .summary-section h3 { margin: 0; color: var(--primary); font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; }
+    .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
+    .summary-card { min-height: 124px; padding: 14px 10px; text-align: center; display:flex; flex-direction:column; justify-content:center; box-shadow:none; }
     .summary-card .icon { font-size: 2.15rem; line-height:1; }
     .summary-card strong { display: block; font-size: 1.65rem; margin: 13px 0 6px; color: #17104d; }
     .summary-card span { color: #19163e; font-size: .95rem; }
-    .quick-log { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 14px; }
+    .quick-log { display: grid; grid-template-columns: repeat(auto-fit, minmax(176px, 1fr)); gap: 14px; }
     .quick-group { display: grid; gap: 10px; align-content:start; }
     .quick-group h3 { margin: 0; color: var(--primary); font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; }
-    .quick-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 10px; }
+    .quick-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
     .action-btn, .ghost-btn, .danger-btn { border: 0; border-radius: 16px; font-weight: 900; transition: transform .15s, box-shadow .15s, border-color .15s; }
-    .action-btn { min-height: 86px; padding: 12px 10px; color: var(--primary); background: linear-gradient(180deg, #fff, #faf8ff); border: 1px solid var(--line); box-shadow:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 8px; }
-    .action-btn .quick-icon { font-size: 2rem; line-height:1; }
+    .action-btn { min-height: 44px; padding: 9px 12px; color: var(--primary); background: linear-gradient(180deg, #fff, #faf8ff); border: 1px solid var(--line); box-shadow:none; display:inline-flex; flex-direction:row; align-items:center; justify-content:center; gap: 6px; white-space: nowrap; }
+    .action-btn .quick-icon { display: none; }
     .action-btn:hover, .ghost-btn:hover { transform: translateY(-2px); box-shadow: var(--small-shadow); border-color: #bcaef0; }
     .ghost-btn { background: #fff; color: var(--primary); border: 1px solid var(--line); padding: 10px 13px; }
     .danger-btn { color: var(--danger); background: #fff0f4; border: 1px solid #ffd1dc; padding: 7px 10px; font-size: .82rem; }
     .edit-btn { color: var(--primary); background: #f4efff; border: 1px solid #dacdfb; padding: 7px 10px; border-radius: 16px; font-weight: 900; font-size: .82rem; }
     .timeline-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
-    .timeline-wrap { position: relative; display:grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 18px; align-items:start; }
+    .data-reset { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .data-reset p { flex: 1 1 240px; margin: 0; color: var(--muted); font-size: .92rem; }
+    .sync-panel { display:grid; gap: 12px; }
+    .sync-actions { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; }
+    .sync-actions input { flex: 1 1 260px; }
+    .sync-status { margin: 0; color: var(--muted); font-size: .95rem; }
+    .timeline-wrap { position: relative; display:grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items:start; }
     .timeline { display: grid; gap: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.65); }
-    .timeline-item { display: grid; grid-template-columns: 92px 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ebe6f5; background: rgba(255,255,255,.42); }
+    .timeline-item { display: grid; grid-template-columns: 120px 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #ebe6f5; background: rgba(255,255,255,.42); }
     .timeline-item:last-child { border-bottom: 0; }
     .time { color: #15113b; font-weight: 900; font-size: .92rem; }
     .timeline-icon { width: 35px; height: 35px; border-radius: 12px; display: grid; place-items: center; font-size: 1.3rem; }
     .timeline-details { color: var(--muted); margin-top: 2px; font-size: .9rem; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
-    .timeline-menu { padding: 12px; }
-    .timeline-menu button { width:100%; display:flex; align-items:center; gap: 12px; background:transparent; border:0; padding: 11px 12px; border-radius: 12px; color: var(--ink); text-align:left; }
-    .timeline-menu button:hover { background: var(--lavender); }
-    .fab { position:absolute; right: 14px; bottom: 14px; width: 74px; height: 74px; border-radius: 50%; border:0; background: linear-gradient(135deg, #7c54df, #4527a0); color:#fff; font-size: 3rem; line-height:1; box-shadow: 0 18px 36px rgba(73,39,160,.28); }
+
     .empty { text-align: center; padding: 34px; color: var(--muted); border: 2px dashed var(--line); border-radius: 18px; background: rgba(255,255,255,.55); }
     .placeholder-page { display: none; max-width: 1120px; margin: 0 auto; }
     dialog { width: min(92vw, 480px); border: 0; border-radius: 26px; padding: 0; box-shadow: 0 30px 90px rgba(34, 21, 68, .32); }
@@ -156,20 +171,24 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       .top-row { grid-template-columns: 1fr; }
       .person-card { align-items:flex-start; }
       .avatar { width: 68px; height: 68px; font-size: 2rem; }
-      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary-grid { grid-template-columns: 1fr; }
       .quick-log { grid-template-columns: 1fr; }
-      .timeline-item { grid-template-columns: 70px 34px 1fr; }
+      .timeline-item { grid-template-columns: 86px 34px 1fr; }
       .timeline-actions { grid-column: 3; justify-content:flex-start; }
-      .fab { position: fixed; right: 18px; bottom: 18px; width: 66px; height: 66px; }
+      .data-reset { align-items: stretch; }
+      .data-reset .danger-btn { width: 100%; }
+      .sync-actions { align-items: stretch; }
+      .sync-actions .ghost-btn, .sync-actions input { width: 100%; }
     }
   </style>
 </head>
 <body>
+  <section class="landing" id="landingView" aria-label="Sign in required"><div class="landing-card panel"><div class="landing-icon">💜</div><h1>Caregiver Companion</h1><p>Sign in to view your private caregiving dashboard and sync entries across your devices.</p><div class="landing-actions"><button class="action-btn" id="landingAccountButton" type="button">Account / Sign in</button></div></div></section>
   <div class="mobile-top"><button class="hamburger" id="menuButton">☰ Menu</button><strong>Caregiver Companion</strong></div>
   <div class="drawer-scrim" id="drawerScrim"></div>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
-      <div class="brand"><div class="brand-icon">💜</div><div><strong>Caregiver<br>Companion</strong><span>v0.1 local-first</span></div></div>
+      <div class="brand"><div class="brand-icon">💜</div><div><strong>Caregiver<br>Companion</strong><span>v0.1 local-first</span><span class="release-label">v0.1 Quick Add + reset tools</span></div></div>
       <nav class="nav" id="navList"></nav>
     </aside>
     <main>
@@ -177,27 +196,44 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
         <div class="top-row">
           <div class="person-card"><div class="avatar" aria-hidden="true">👦🏽</div><div><h1><span id="personHeading">Muhammad</span> <span class="heart">♡</span></h1><p id="dateHeading"></p></div></div>
           <aside class="wake-card"><span class="wake-icon">☀️</span><div><strong>Wake Up</strong><p id="wakeTimeText">Not set</p></div></aside>
-          <aside class="mood-card"><span class="mood-emoji" id="currentMoodEmoji">🙂</span><div><strong>Mood</strong><p id="currentMoodText">Good</p></div></aside>
+          <aside class="mood-card"><span class="mood-emoji" id="currentMoodEmoji">🙂</span><div><strong>Mood</strong><p id="currentMoodText">Not set</p></div></aside>
         </div>
         <section class="panel"><div class="section-title"><div><h2>Today’s Summary</h2></div></div><div class="summary-grid" id="summaryGrid" aria-label="Today's summary"></div></section>
-        <section class="panel"><div class="section-title"><div><h2>Quick Actions</h2><p>Tap to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
-        <section class="panel"><div class="section-title"><div><h2>Today’s Timeline</h2><p>All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div><div class="timeline-menu" id="timelineMenu"></div><button class="fab" id="fabButton" aria-label="Open quick actions">+</button></div></section>
+        <section class="panel"><div class="section-title"><div><h2>Quick Add</h2><p>Tap a compact button to log an event</p></div></div><div class="quick-log" id="quickLog"></div></section>
+        <section class="panel"><div class="section-title"><div><h2 id="timelineTitle">Today’s Timeline</h2><p id="timelineSubtitle">All events are automatically time-stamped</p></div><button class="ghost-btn" id="clearTodayButton">View All →</button></div><div class="timeline-wrap"><div class="timeline" id="timeline"></div></div><div class="data-reset" aria-label="Temporary data reset tools"><p>Temporary reset tools. If you are signed in, these also clear matching synced Supabase entries so old data does not come back on the next sync.</p><button class="danger-btn" id="clearWeekButton" type="button">Clear this week’s data</button><button class="danger-btn" id="clearAllDataButton" type="button">Clear all saved data</button></div></section>
       </section>
       <section class="panel placeholder-page" id="placeholderView"><h2 id="placeholderTitle"></h2><p class="muted">This area is reserved for a future focused view. v0.1 keeps daily tracking on the Today dashboard.</p></section>
     </main>
   </div>
   <dialog id="entryModal"><form method="dialog" class="modal-body" id="modalForm"><h2 id="modalTitle"></h2><div id="modalFields"></div><div class="modal-actions"><button class="ghost-btn" value="cancel" type="button" id="cancelModal">Cancel</button><button class="action-btn" value="default" type="submit">Save entry</button></div></form></dialog>
+  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured. If the app-wide config is filled in, you only need to enter your email here.</p><div class="field"><label for="supabaseUrlInput">Supabase Project URL</label><input id="supabaseUrlInput" type="url" placeholder="https://your-project.supabase.co" autocomplete="off" /></div><div class="field"><label for="supabaseKeyInput">Supabase publishable key</label><input id="supabaseKeyInput" type="password" placeholder="sb_publishable_..." autocomplete="off" /></div><div class="sync-actions"><button class="ghost-btn" id="saveSyncConfigButton" type="button">Save sync settings</button></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
+  <dialog id="settingsModal"><div class="modal-body"><h2>Settings</h2><div class="field"><label for="clientNameInput">Client name</label><input id="clientNameInput" placeholder="Person you are caregiving" autocomplete="name" /></div><p class="sync-status">This name appears on the Today dashboard after sign-in.</p><div class="modal-actions"><button class="ghost-btn" id="closeSettingsButton" type="button">Close</button><button class="action-btn" id="saveClientButton" type="button">Save client</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+    // Optional app-wide Supabase config. Use the Project URL and publishable key, never a secret/service-role key.
+    // Filling these once in the deployed app means each device only needs the email login step.
+    window.CAREGIVER_SUPABASE_URL = "";
+    window.CAREGIVER_SUPABASE_ANON_KEY = "";
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // ===== state =====
     const ENTRY_KEY = "caregiverCompanion_entries";
     const SETTINGS_KEY = "caregiverCompanion_settings";
+    const SUPABASE_URL_KEY = "caregiverCompanion_supabase_url";
+    const SUPABASE_ANON_KEY_KEY = "caregiverCompanion_supabase_anon_key";
+    const SUPABASE_URL = window.CAREGIVER_SUPABASE_URL || "";
+    const SUPABASE_ANON_KEY = window.CAREGIVER_SUPABASE_ANON_KEY || "";
     const defaultSettings = { personName: "Muhammad", waterGoal: 3, teethGoal: 2, enemaWeeklyGoal: 2 };
     let entries = [];
     let settings = { ...defaultSettings };
     let activeModalType = null;
     let editingEntryId = null;
-    const navItems = ["🏠 Today", "🍼 Feeding & Hydration", "🩲 Diapers", "🪥 Hygiene", "🍎 Food Log", "🚶 Activity & Positioning", "🌡️ Health & Meds", "📅 Appointments", "📦 Supplies", "📝 Concerns & Notes", "👤 Contacts", "📊 Reports", "⚙️ Settings", "? Help"];
+    let timelineMode = "today";
+    let lastQuickAction = { type: null, at: 0 };
+    let supabaseClient = null;
+    let currentUser = null;
+    const navItems = ["🏠 Today", "🍼 Feeding & Hydration", "🩲 Diapers", "🪥 Hygiene", "🍎 Food Log", "🚶 Activity & Positioning", "🌡️ Health & Meds", "📅 Appointments", "📦 Supplies", "📝 Concerns & Notes", "👤 Contacts", "📊 Reports", "🔐 Account", "⚙️ Settings", "? Help"];
     const eventMeta = { shake: ["🍼", "Shake"], water: ["💧", "Water"], food: ["🍎", "Food"], pee: ["💦", "Pee"], poopy: ["💩", "Poopy"], wake: ["☀️", "Wake Up"], note: ["📝", "Note"], mood: ["😊", "Mood"], teeth: ["🪥", "Teeth Brushed"], bath: ["🛁", "Bath"], laundry: ["🧺", "Laundry"], nails: ["✂️", "Nails Clipped"], lotion: ["🧴", "Lotion"], miralax: ["🥤", "Miralax"], enema: ["⚕️", "Enema"] };
 
     // ===== storage =====
@@ -209,13 +245,53 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function readJSON(key, fallback) { try { const parsed = JSON.parse(localStorage.getItem(key)); return parsed ?? fallback; } catch { return fallback; } }
     function saveEntries() { localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); }
     function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+    function updateAuthGate() { document.body.classList.toggle("signed-in", Boolean(currentUser)); }
+    function populateClientFields() { const clientName = document.getElementById("clientNameInput"); if (clientName) clientName.value = settings.personName; }
+    function saveClientSettings() { settings.personName = value("clientNameInput") || defaultSettings.personName; saveSettings(); render(); showToast("Client saved"); }
 
-    // ===== future sync placeholders =====
-    const syncAdapter = {
-      status: "local-only",
-      async pull() { /* Future v1.0: Supabase Auth + select care_entries/care_settings where user_id = auth.uid(). */ },
-      async push() { /* Future v1.0: upsert rows with user_id set server-side/scoped by RLS to auth.uid(). */ }
-    };
+    // ===== optional Supabase email login + sync =====
+    function configuredSupabaseUrl() { return localStorage.getItem(SUPABASE_URL_KEY) || SUPABASE_URL; }
+    function configuredSupabaseKey() { return localStorage.getItem(SUPABASE_ANON_KEY_KEY) || SUPABASE_ANON_KEY; }
+    function syncSetupMessage() { if (!configuredSupabaseUrl()) return "Missing Supabase Project URL. Paste it above and save sync settings."; if (!configuredSupabaseKey()) return "Missing Supabase publishable key. Paste it above and save sync settings."; if (!window.supabase) return "Supabase client script has not loaded yet. Check your connection and try again."; return ""; }
+    function syncConfigured() { return !syncSetupMessage(); }
+    function updateSyncStatus(message) { const status = document.getElementById("syncStatus"); if (status) status.textContent = message; }
+    function populateSyncConfigFields() { const url = document.getElementById("supabaseUrlInput"); const key = document.getElementById("supabaseKeyInput"); if (url) url.value = configuredSupabaseUrl(); if (key) key.value = configuredSupabaseKey(); }
+    function saveSyncConfig() { localStorage.setItem(SUPABASE_URL_KEY, value("supabaseUrlInput")); localStorage.setItem(SUPABASE_ANON_KEY_KEY, value("supabaseKeyInput")); supabaseClient = null; updateSyncStatus("Sync settings saved. You can now send a login link."); initSync(); }
+    async function initSync() {
+      populateSyncConfigFields();
+      const setupMessage = syncSetupMessage();
+      if (setupMessage) { currentUser = null; updateAuthGate(); updateSyncStatus(`${setupMessage} Local tracking still works on this device.`); return; }
+      if (!supabaseClient) supabaseClient = window.supabase.createClient(configuredSupabaseUrl(), configuredSupabaseKey());
+      const { data } = await supabaseClient.auth.getSession();
+      currentUser = data.session?.user || null;
+      updateAuthGate();
+      updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Enter your email to receive a login link for sync.");
+      supabaseClient.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; updateAuthGate(); updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Signed out. Local tracking still works on this device."); if (currentUser) syncNow(); });
+      if (currentUser) await syncNow();
+    }
+    async function sendLoginLink() {
+      if (!syncConfigured()) { updateSyncStatus(syncSetupMessage()); return; }
+      const email = value("syncEmail");
+      if (!email) { updateSyncStatus("Enter an email address first."); return; }
+      const redirectTo = window.location.href.split(/[?#]/)[0];
+      const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+      updateSyncStatus(error ? `Login link error: ${error.message}` : `Check your email for the login link. It will return to ${redirectTo}`);
+    }
+    async function signOut() { if (!supabaseClient) return; await supabaseClient.auth.signOut(); currentUser = null; updateAuthGate(); updateSyncStatus("Signed out. Local tracking still works on this device."); }
+    async function syncNow() {
+      if (!supabaseClient || !currentUser) { updateSyncStatus(syncConfigured() ? "Sign in before syncing." : syncSetupMessage()); return; }
+      updateSyncStatus("Syncing entries…");
+      const localRows = entries.map(entry => ({ ...entry, user_id: currentUser.id }));
+      if (localRows.length) { const { error: pushError } = await supabaseClient.from("care_entries").upsert(localRows, { onConflict: "id" }); if (pushError) { updateSyncStatus(`Sync error: ${pushError.message}`); return; } }
+      const { data, error } = await supabaseClient.from("care_entries").select("*").eq("user_id", currentUser.id);
+      if (error) { updateSyncStatus(`Sync error: ${error.message}`); return; }
+      const merged = new Map(entries.map(entry => [entry.id, entry]));
+      (data || []).map(normalizeEvent).filter(Boolean).forEach(entry => merged.set(entry.id, entry));
+      entries = [...merged.values()];
+      saveEntries();
+      render();
+      updateSyncStatus(`Synced ${entries.length} entries as ${currentUser.email}.`);
+    }
 
     // ===== event creation =====
     function createEvent(type, details = {}, timestamp = new Date()) {
@@ -227,50 +303,93 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function addInstant(type) { entries.push(createEvent(type)); persistAndRender(`${labelFor(type)} added`); }
     function addDetailed(type, details) { entries.push(createEvent(type, details)); persistAndRender(`${labelFor(type)} saved`); }
     function deleteEntry(id) { entries = entries.filter(entry => entry.id !== id); persistAndRender("Entry deleted"); }
-    function persistAndRender(message) { saveEntries(); render(); showToast(message); }
+    async function clearThisWeeksData() {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0,0,0,0);
+      const removedCount = entries.filter(entry => new Date(entry.timestamp) >= start).length;
+      const scope = currentUser ? "on this device and in synced Supabase data" : "on this device";
+      if (!confirm(`Clear ${removedCount} entries from this week ${scope}? This cannot be undone.`)) return;
+      if (supabaseClient && currentUser) {
+        const { error } = await supabaseClient.from("care_entries").delete().eq("user_id", currentUser.id).gte("timestamp", start.toISOString());
+        if (error) { updateSyncStatus(`Clear synced data error: ${error.message}`); return; }
+      }
+      entries = entries.filter(entry => new Date(entry.timestamp) < start);
+      saveEntries();
+      render();
+      showToast("This week’s data cleared");
+    }
+    async function clearAllAppData() {
+      const scope = currentUser ? "on this device and in synced Supabase data" : "on this device";
+      if (!confirm(`Clear ALL Caregiver Companion entries and settings ${scope}? This cannot be undone.`)) return;
+      if (supabaseClient && currentUser) {
+        const { error } = await supabaseClient.from("care_entries").delete().eq("user_id", currentUser.id);
+        if (error) { updateSyncStatus(`Clear synced data error: ${error.message}`); return; }
+      }
+      localStorage.removeItem(ENTRY_KEY);
+      localStorage.removeItem(SETTINGS_KEY);
+      entries = [];
+      settings = { ...defaultSettings };
+      saveSettings();
+      render();
+      showToast("All app data cleared");
+    }
+    function persistAndRender(message) { saveEntries(); render(); showToast(message); if (currentUser) syncNow(); }
+    function handleQuickAction(quick) {
+      const type = quick.dataset.type;
+      const now = Date.now();
+      if (lastQuickAction.type === type && now - lastQuickAction.at < 900) return;
+      lastQuickAction = { type, at: now };
+      quick.dataset.modal === "true" ? openEntryModal(type) : addInstant(type);
+    }
 
     // ===== summary calculations =====
     function todayEntries() { const today = localDateKey(new Date()); return entries.filter(entry => localDateKey(new Date(entry.timestamp)) === today).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp)); }
+    function allEntries() { return [...entries].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)); }
     function countToday(type) { return todayEntries().filter(entry => entry.type === type).length; }
     function latestMood() { return [...todayEntries()].reverse().find(entry => entry.type === "mood" || entry.details?.mood); }
     function latestToday(type) { return [...todayEntries()].reverse().find(entry => entry.type === type); }
     function weeklyCount(type) { const now = new Date(); const start = new Date(now); start.setDate(now.getDate() - now.getDay()); start.setHours(0,0,0,0); return entries.filter(entry => entry.type === type && new Date(entry.timestamp) >= start).length; }
-    function summaryCards() {
-      const mood = latestMood();
+    function summarySections() {
       return [
-        ["😊", mood ? mood.details.mood || "Set" : "Good", "Mood"],
-        ["💧", `${countToday("water")} / ${settings.waterGoal}`, "Water"],
-        ["🍼", countToday("shake"), "Shakes"],
-        ["🍎", countToday("food"), "Food"],
-        ["💦", countToday("pee"), "Pee"],
-        ["💩", countToday("poopy"), "Poopy"],
-        ["🪥", `${countToday("teeth")} / ${settings.teethGoal}`, "Teeth"],
-        ["🧺", countToday("laundry"), "Laundry Loads"],
-        ["🥤", `${countToday("miralax")} / 2`, "Miralax"],
-        ["⚕️", `${weeklyCount("enema")} / ${settings.enemaWeeklyGoal}`, "Enema Weekly"]
+        { title: "Feeding & Hydration", cards: [["💧", `${countToday("water")} / ${settings.waterGoal}`, "Water"], ["🍼", countToday("shake"), "Shakes"], ["🍎", countToday("food"), "Food"]] },
+        { title: "Toileting & Diapers", cards: [["💦", countToday("pee"), "Pee"], ["💩", countToday("poopy"), "Poopy"], ["⚕️", `${weeklyCount("enema")} / ${settings.enemaWeeklyGoal}`, "Enema Weekly"]] },
+        { title: "Daily Care", cards: [["🪥", `${countToday("teeth")} / ${settings.teethGoal}`, "Teeth"], ["🧺", countToday("laundry"), "Laundry Loads"]] },
+        { title: "Meds & Supplements", cards: [["🥤", `${countToday("miralax")} / 2`, "Miralax"]] }
       ];
     }
 
     // ===== rendering =====
     function render() { renderNavigation(); renderHeader(); renderSummary(); renderQuickLog(); renderTimeline(); }
     function renderNavigation() { document.getElementById("navList").innerHTML = navItems.map((item, index) => `${index === 12 ? '<div class="nav-separator"></div>' : ''}<button class="${index === 0 ? "active" : ""}" data-page="${item.replace(/^[^A-Za-z?]+\s*/, "")}">${item}</button>`).join(""); }
-    function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Good"; }
-    function renderSummary() { const colors = ["var(--gold)", "var(--blue)", "var(--lavender)", "var(--sage)", "var(--teal)", "var(--peach)", "#fff5ec", "#f8f2ff", "#f4fbef", "#fbf7ff"]; document.getElementById("summaryGrid").innerHTML = summaryCards().map(([icon, value, label], index) => `<article class="summary-card" style="background:${colors[index % colors.length]}"><span class="icon">${icon}</span><strong>${value}</strong><span>${label}</span></article>`).join(""); }
+    function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Not set"; }
+    function renderSummary() {
+      const colors = ["var(--gold)", "var(--blue)", "var(--lavender)", "var(--sage)", "var(--teal)", "var(--peach)", "#fff5ec", "#f8f2ff", "#f4fbef", "#fbf7ff"];
+      let colorIndex = 0;
+      document.getElementById("summaryGrid").innerHTML = summarySections().map(section => `<section class="summary-section"><h3>${section.title}</h3><div class="summary-cards">${section.cards.map(([icon, value, label]) => { const color = colors[colorIndex++ % colors.length]; return `<article class="summary-card" style="background:${color}"><span class="icon">${icon}</span><strong>${value}</strong><span>${label}</span></article>`; }).join("")}</div></section>`).join("");
+    }
     function renderQuickLog() { const groups = [
-      { title: "Feeding", buttons: [["shake", "🍼", "+ Shake"], ["water", "💧", "+ Water"], ["food", "🍏", "+ Food", true], ["miralax", "🥤", "+ Miralax"]] },
-      { title: "Diapers", buttons: [["pee", "🩲", "+ Pee"], ["poopy", "💩", "+ Poopy"]] },
-      { title: "Daily Care", buttons: [["wake", "☀️", "+ Wake Up", true], ["teeth", "🪥", "+ Teeth"], ["bath", "🛁", "+ Bath"], ["lotion", "🧴", "+ Lotion"], ["nails", "✂️", "+ Nails"]] },
-      { title: "Household", buttons: [["laundry", "🧺", "+ Laundry", true], ["enema", "⚕️", "+ Enema"]] }
-    ]; document.getElementById("quickLog").innerHTML = groups.map(group => `<div class="quick-group"><h3>${group.title}</h3><div class="quick-buttons">${group.buttons.map(([type, icon, text, modal]) => `<button class="action-btn" data-type="${type}" data-modal="${modal ? "true" : "false"}"><span class="quick-icon">${icon}</span><span>${text}</span></button>`).join("")}</div></div>`).join(""); renderTimelineMenu(); }
-    function renderTimeline() { const todays = todayEntries(); document.getElementById("timeline").innerHTML = todays.length ? todays.map(entry => { const [icon, label] = eventMeta[entry.type] || ["✨", entry.type]; return `<article class="timeline-item"><div class="time">${formatTime(entry.timestamp)}</div><div class="timeline-icon">${icon}</div><div><strong>${label}</strong><div class="timeline-details">${detailsText(entry)}</div></div><div class="timeline-actions"><button class="edit-btn" data-edit="${entry.id}">Edit</button><button class="danger-btn" data-delete="${entry.id}">Delete</button></div></article>`; }).join("") : `<div class="empty">No entries yet today. Quick log something when you are ready 💜</div>`; }
+      { title: "Feeding", buttons: [["shake", "🍼", "Shake"], ["water", "💧", "Water"], ["food", "🍏", "Food", true], ["miralax", "🥤", "Miralax"]] },
+      { title: "Toileting & Diapers", buttons: [["pee", "🩲", "Pee"], ["poopy", "💩", "Poopy"], ["enema", "⚕️", "Enema"]] },
+      { title: "Daily Care", buttons: [["wake", "☀️", "Wake Up", true], ["mood", "😊", "Mood", true], ["note", "📝", "Note", true], ["teeth", "🪥", "Teeth"], ["bath", "🛁", "Bath"], ["lotion", "🧴", "Lotion"], ["nails", "✂️", "Nails"]] },
+      { title: "Household", buttons: [["laundry", "🧺", "Laundry", true]] }
+    ]; document.getElementById("quickLog").innerHTML = groups.map(group => `<div class="quick-group"><h3>${group.title}</h3><div class="quick-buttons">${group.buttons.map(([type, icon, text, modal]) => `<button class="action-btn" data-type="${type}" data-modal="${modal ? "true" : "false"}"><span class="quick-icon">${icon}</span><span>+ ${icon} ${text}</span></button>`).join("")}</div></div>`).join(""); }
+    function renderTimeline() {
+      const showingAll = timelineMode === "all";
+      const visibleEntries = showingAll ? allEntries() : todayEntries();
+      document.getElementById("timelineTitle").textContent = showingAll ? "All Entries" : "Today’s Timeline";
+      document.getElementById("timelineSubtitle").textContent = showingAll ? "Showing saved entries from every day on this device" : "All events are automatically time-stamped";
+      document.getElementById("clearTodayButton").textContent = showingAll ? "Show Today" : "View All →";
+      document.getElementById("timeline").innerHTML = visibleEntries.length ? visibleEntries.map(entry => { const [icon, label] = eventMeta[entry.type] || ["✨", entry.type]; return `<article class="timeline-item"><div class="time">${showingAll ? formatDateTime(entry.timestamp) : formatTime(entry.timestamp)}</div><div class="timeline-icon">${icon}</div><div><strong>${label}</strong><div class="timeline-details">${detailsText(entry)}</div></div><div class="timeline-actions"><button class="edit-btn" data-edit="${entry.id}">Edit</button><button class="danger-btn" data-delete="${entry.id}">Delete</button></div></article>`; }).join("") : `<div class="empty">${showingAll ? "No saved entries yet." : "No entries yet today. Quick log something when you are ready 💜"}</div>`;
+    }
 
-    function renderTimelineMenu() { const menu = document.getElementById("timelineMenu"); if (!menu) return; menu.innerHTML = [["shake", "🍼", "+ Add Shake"], ["water", "💧", "+ Add Water"], ["food", "🍏", "+ Add Food", true], ["pee", "🩲", "+ Add Pee"], ["poopy", "💩", "+ Add Poopy"], ["wake", "☀️", "+ Add Wake Up", true], ["laundry", "🧺", "+ Add Laundry", true], ["note", "📝", "+ Add Note", true]].map(([type, icon, label, modal]) => `<button data-type="${type}" data-modal="${modal ? "true" : "false"}"><span>${icon}</span><span>${label}</span></button>`).join(""); }
 
     // ===== modals =====
     function openEntryModal(type) {
       activeModalType = type;
       editingEntryId = null;
-      const titles = { food: "Log food", note: "Add note", wake: "Log wake up", laundry: "Log laundry load" };
+      const titles = { food: "Log food", note: "Add note", wake: "Log wake up", laundry: "Log laundry load", mood: "Log mood" };
       document.getElementById("modalTitle").textContent = titles[type] || `Log ${labelFor(type)}`;
       document.getElementById("modalFields").innerHTML = modalFieldsFor(type);
       document.getElementById("entryModal").showModal();
@@ -279,6 +398,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
       const d = entry?.details || {};
       if (type === "food") return `<div class="field"><label for="foodName">Food name</label><input id="foodName" required value="${escapeHTML(d.foodName || "")}" placeholder="Applesauce, oatmeal, shake supplement..." /></div><div class="field"><label for="foodAmount">Amount optional</label><input id="foodAmount" value="${escapeHTML(d.amount || "")}" placeholder="A few bites, 1 cup, half bowl..." /></div><div class="field"><label for="foodNotes">Notes optional</label><textarea id="foodNotes" placeholder="How it went, preferences, anything helpful...">${escapeHTML(d.notes || "")}</textarea></div>`;
       if (type === "wake") return `<div class="field"><label for="wakeTime">Wake up time</label><input id="wakeTime" type="time" required value="${entry ? timeInputValue(entry.timestamp) : timeInputValue(new Date())}" /></div><div class="field"><label for="wakeMood">Mood optional</label><select id="wakeMood"><option value="">No mood</option>${moodOptions(d.mood)}</select></div>`;
+      if (type === "mood") return `<div class="field"><label for="quickMood">Mood</label><select id="quickMood" required>${moodOptions(d.mood || "Good")}</select></div>`;
       if (type === "laundry") return `<div class="field"><label for="loadType">Load type</label><select id="loadType"><option ${d.loadType === "Blankets" ? "selected" : ""}>Blankets</option><option ${d.loadType === "Clothes" ? "selected" : ""}>Clothes</option><option ${d.loadType === "Mixed" ? "selected" : ""}>Mixed</option><option ${d.loadType === "Bed pads" ? "selected" : ""}>Bed pads</option></select></div><div class="field"><label for="laundryNotes">Notes optional</label><textarea id="laundryNotes" placeholder="Anything useful about the load...">${escapeHTML(d.notes || "")}</textarea></div>`;
       if (type === "edit") return `<div class="field"><label for="editDateTime">Actual date and time</label><input id="editDateTime" type="datetime-local" required value="${dateTimeInputValue(entry.timestamp)}" /></div><p class="muted">Use this if the timeline used the current time but you need to correct when the care happened.</p>`;
       return `<div class="field"><label for="noteText">Note</label><textarea id="noteText" required placeholder="Write a gentle note about today...">${escapeHTML(d.text || "")}</textarea></div><div class="field"><label for="noteMood">Mood optional</label><select id="noteMood"><option value="">No mood</option>${moodOptions(d.mood)}</select></div>`;
@@ -303,12 +423,15 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
         const mood = value("wakeMood");
         const wakeDate = dateWithTime(value("wakeTime"));
         entries.push(createEvent("wake", { mood, moodEmoji: mood ? "😊" : undefined }, wakeDate));
-        if (mood) entries.push(createEvent("mood", { mood, moodEmoji: "😊", source: "wake" }, wakeDate));
         persistAndRender("Wake up saved");
       }
       if (activeModalType === "laundry") {
         entries.push(createEvent("laundry", { loadType: value("loadType"), notes: value("laundryNotes") }));
         persistAndRender("Laundry saved");
+      }
+      if (activeModalType === "mood") {
+        entries.push(createEvent("mood", { mood: value("quickMood"), moodEmoji: "😊", source: "quick-add" }));
+        persistAndRender("Mood saved");
       }
       if (activeModalType === "note") {
         const mood = value("noteMood");
@@ -325,6 +448,7 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
     function detailsText(entry) { const d = entry.details || {}; if (entry.type === "food") return [d.foodName, d.amount, d.notes].filter(Boolean).join(" • ") || "Food logged"; if (entry.type === "note") return [d.text, d.mood && `Mood: ${d.mood}`].filter(Boolean).join(" • "); if (entry.type === "wake") return d.mood ? `Mood: ${d.mood}` : "Wake up logged"; if (entry.type === "laundry") return [d.loadType, d.notes].filter(Boolean).join(" • ") || "Laundry load"; if (entry.type === "mood") return d.mood || "Mood set"; return "Instant log"; }
     function labelFor(type) { return eventMeta[type]?.[1] || type; }
     function formatTime(iso) { return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(iso)); }
+    function formatDateTime(iso) { return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(iso)); }
     function localDateKey(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`; }
     function value(id) { return document.getElementById(id)?.value.trim() || ""; }
     function dateWithTime(timeValue) { const [hours, minutes] = timeValue.split(":").map(Number); const date = new Date(); date.setHours(hours, minutes, 0, 0); return date; }
@@ -336,20 +460,35 @@ Local storage only; no auth, payments, sharing, provider portal, or cloud sync i
 
     // ===== event listeners =====
     document.addEventListener("click", event => {
-      const quick = event.target.closest("[data-type]"); if (quick) { quick.dataset.modal === "true" ? openEntryModal(quick.dataset.type) : addInstant(quick.dataset.type); }
+      const quick = event.target.closest("[data-type]"); if (quick) { event.preventDefault(); event.stopPropagation(); handleQuickAction(quick); return; }
       const edit = event.target.closest("[data-edit]"); if (edit) openEditModal(edit.dataset.edit);
       const del = event.target.closest("[data-delete]"); if (del && confirm("Delete this entry?")) deleteEntry(del.dataset.delete);
-      const page = event.target.closest("[data-page]"); if (page) { document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
+      const page = event.target.closest("[data-page]"); if (page) { if (page.dataset.page === "Account") { populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); document.body.classList.remove("drawer-open"); return; } if (page.dataset.page === "Settings") { populateClientFields(); document.getElementById("settingsModal").showModal(); document.body.classList.remove("drawer-open"); return; } document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
     });
     document.getElementById("menuButton").addEventListener("click", () => document.body.classList.add("drawer-open"));
     document.getElementById("drawerScrim").addEventListener("click", () => document.body.classList.remove("drawer-open"));
     document.getElementById("cancelModal").addEventListener("click", closeModal);
     document.getElementById("modalForm").addEventListener("submit", submitModal);
-    document.getElementById("clearTodayButton").addEventListener("click", () => document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }));
-    document.getElementById("fabButton").addEventListener("click", () => openEntryModal("note"));
+    document.getElementById("clearTodayButton").addEventListener("click", () => { timelineMode = timelineMode === "all" ? "today" : "all"; renderTimeline(); document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }); });
+    document.getElementById("clearWeekButton").addEventListener("click", clearThisWeeksData);
+    document.getElementById("clearAllDataButton").addEventListener("click", clearAllAppData);
+    document.getElementById("landingAccountButton").addEventListener("click", () => { populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); });
+    document.getElementById("saveClientButton").addEventListener("click", saveClientSettings);
+    document.getElementById("closeSettingsButton").addEventListener("click", () => document.getElementById("settingsModal").close());
+    document.getElementById("saveSyncConfigButton").addEventListener("click", saveSyncConfig);
+    document.getElementById("emailLoginButton").addEventListener("click", sendLoginLink);
+    document.getElementById("syncNowButton").addEventListener("click", syncNow);
+    document.getElementById("signOutButton").addEventListener("click", signOut);
+    document.getElementById("closeAccountButton").addEventListener("click", () => document.getElementById("accountModal").close());
 
-    loadStorage();
-    render();
+    try {
+      loadStorage();
+      render();
+      initSync();
+    } catch (error) {
+      console.error("Caregiver Companion failed to render", error);
+      showToast("Something went wrong loading the dashboard");
+    }
   </script>
 </body>
 </html>

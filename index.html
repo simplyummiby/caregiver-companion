@@ -66,6 +66,14 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     }
     button, input, textarea, select { font: inherit; }
     button { cursor: pointer; }
+    .landing { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    .landing-card { width: min(680px, 100%); padding: 34px; text-align: center; }
+    .landing-card h1 { margin: 12px 0; font-size: clamp(2.1rem, 6vw, 4rem); letter-spacing: -.05em; }
+    .landing-card p { color: var(--muted); font-size: 1.05rem; line-height: 1.55; }
+    .landing-icon { width: 76px; height: 76px; margin: 0 auto; border-radius: 26px; display:grid; place-items:center; background: linear-gradient(135deg, #8a5cff, #4527a0); color:#fff; font-size: 2.4rem; box-shadow: var(--small-shadow); }
+    .landing-actions { display:flex; gap: 12px; justify-content:center; flex-wrap:wrap; margin-top: 22px; }
+    body.signed-in .landing { display:none; }
+    body:not(.signed-in) .app-shell { display:none; }
     .app-shell { min-height: 100vh; display: flex; }
     .sidebar {
       position: fixed; inset: 0 auto 0 0; width: 280px; padding: 26px 18px;
@@ -175,6 +183,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
   </style>
 </head>
 <body>
+  <section class="landing" id="landingView" aria-label="Sign in required"><div class="landing-card panel"><div class="landing-icon">💜</div><h1>Caregiver Companion</h1><p>Sign in to view <span id="landingPersonName">Muhammad</span>’s private caregiving dashboard and sync entries across your devices.</p><div class="landing-actions"><button class="action-btn" id="landingAccountButton" type="button">Account / Sign in</button></div></div></section>
   <div class="mobile-top"><button class="hamburger" id="menuButton">☰ Menu</button><strong>Caregiver Companion</strong></div>
   <div class="drawer-scrim" id="drawerScrim"></div>
   <div class="app-shell">
@@ -197,8 +206,15 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     </main>
   </div>
   <dialog id="entryModal"><form method="dialog" class="modal-body" id="modalForm"><h2 id="modalTitle"></h2><div id="modalFields"></div><div class="modal-actions"><button class="ghost-btn" value="cancel" type="button" id="cancelModal">Cancel</button><button class="action-btn" value="default" type="submit">Save entry</button></div></form></dialog>
-  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured. If the app-wide config is filled in, you only need to enter your email here.</p><div class="field"><label for="supabaseUrlInput">Supabase Project URL</label><input id="supabaseUrlInput" type="url" placeholder="https://your-project.supabase.co" autocomplete="off" /></div><div class="field"><label for="supabaseKeyInput">Supabase publishable key</label><input id="supabaseKeyInput" type="password" placeholder="sb_publishable_..." autocomplete="off" /></div><div class="sync-actions"><button class="ghost-btn" id="saveSyncConfigButton" type="button">Save sync settings</button></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
+  <dialog id="accountModal"><div class="modal-body sync-panel"><h2>Account</h2><p class="sync-status">Email login can sync entries across your devices after Supabase is configured. If the app-wide config is filled in, you only need to enter your email here.</p><div class="field"><label for="clientNameInput">Client name</label><input id="clientNameInput" placeholder="Person you are caregiving" autocomplete="name" /></div><div class="sync-actions"><button class="ghost-btn" id="saveClientButton" type="button">Save client</button></div><div class="field"><label for="supabaseUrlInput">Supabase Project URL</label><input id="supabaseUrlInput" type="url" placeholder="https://your-project.supabase.co" autocomplete="off" /></div><div class="field"><label for="supabaseKeyInput">Supabase publishable key</label><input id="supabaseKeyInput" type="password" placeholder="sb_publishable_..." autocomplete="off" /></div><div class="sync-actions"><button class="ghost-btn" id="saveSyncConfigButton" type="button">Save sync settings</button></div><div class="sync-actions"><input id="syncEmail" type="email" placeholder="you@example.com" autocomplete="email" /><button class="ghost-btn" id="emailLoginButton" type="button">Send login link</button><button class="ghost-btn" id="syncNowButton" type="button">Sync now</button><button class="danger-btn" id="signOutButton" type="button">Sign out</button></div><p class="sync-status" id="syncStatus">Checking sync setup…</p><div class="modal-actions"><button class="ghost-btn" id="closeAccountButton" type="button">Close</button></div></div></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Optional app-wide Supabase config. Use the Project URL and publishable key, never a secret/service-role key.
+    // Filling these once in the deployed app means each device only needs the email login step.
+    window.CAREGIVER_SUPABASE_URL = "";
+    window.CAREGIVER_SUPABASE_ANON_KEY = "";
+  </script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // Optional app-wide Supabase config. Use the Project URL and publishable key, never a secret/service-role key.
@@ -213,8 +229,8 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     const SETTINGS_KEY = "caregiverCompanion_settings";
     const SUPABASE_URL_KEY = "caregiverCompanion_supabase_url";
     const SUPABASE_ANON_KEY_KEY = "caregiverCompanion_supabase_anon_key";
-    const SUPABASE_URL = window.CAREGIVER_SUPABASE_URL || "https://yhujmxfodajeghdvfqar.supabase.co";
-    const SUPABASE_ANON_KEY = window.CAREGIVER_SUPABASE_ANON_KEY || "sb_publishable_mdTULpg76CScYYMUNkBqXQ___XPVLFH";
+    const SUPABASE_URL = window.CAREGIVER_SUPABASE_URL || "";
+    const SUPABASE_ANON_KEY = window.CAREGIVER_SUPABASE_ANON_KEY || "";
     const defaultSettings = { personName: "Muhammad", waterGoal: 3, teethGoal: 2, enemaWeeklyGoal: 2 };
     let entries = [];
     let settings = { ...defaultSettings };
@@ -235,6 +251,9 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     function readJSON(key, fallback) { try { const parsed = JSON.parse(localStorage.getItem(key)); return parsed ?? fallback; } catch { return fallback; } }
     function saveEntries() { localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); }
     function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+    function updateAuthGate() { document.body.classList.toggle("signed-in", Boolean(currentUser)); }
+    function populateClientFields() { const clientName = document.getElementById("clientNameInput"); if (clientName) clientName.value = settings.personName; }
+    function saveClientSettings() { settings.personName = value("clientNameInput") || defaultSettings.personName; saveSettings(); render(); showToast("Client saved"); }
 
     // ===== optional Supabase email login + sync =====
     function configuredSupabaseUrl() { return localStorage.getItem(SUPABASE_URL_KEY) || SUPABASE_URL; }
@@ -247,12 +266,13 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     async function initSync() {
       populateSyncConfigFields();
       const setupMessage = syncSetupMessage();
-      if (setupMessage) { updateSyncStatus(`${setupMessage} Local tracking still works on this device.`); return; }
+      if (setupMessage) { currentUser = null; updateAuthGate(); updateSyncStatus(`${setupMessage} Local tracking still works on this device.`); return; }
       if (!supabaseClient) supabaseClient = window.supabase.createClient(configuredSupabaseUrl(), configuredSupabaseKey());
       const { data } = await supabaseClient.auth.getSession();
       currentUser = data.session?.user || null;
+      updateAuthGate();
       updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Enter your email to receive a login link for sync.");
-      supabaseClient.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Signed out. Local tracking still works on this device."); if (currentUser) syncNow(); });
+      supabaseClient.auth.onAuthStateChange((_event, session) => { currentUser = session?.user || null; updateAuthGate(); updateSyncStatus(currentUser ? `Signed in as ${currentUser.email}. Sync ready.` : "Signed out. Local tracking still works on this device."); if (currentUser) syncNow(); });
       if (currentUser) await syncNow();
     }
     async function sendLoginLink() {
@@ -263,7 +283,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
       const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
       updateSyncStatus(error ? `Login link error: ${error.message}` : `Check your email for the login link. It will return to ${redirectTo}`);
     }
-    async function signOut() { if (!supabaseClient) return; await supabaseClient.auth.signOut(); currentUser = null; updateSyncStatus("Signed out. Local tracking still works on this device."); }
+    async function signOut() { if (!supabaseClient) return; await supabaseClient.auth.signOut(); currentUser = null; updateAuthGate(); updateSyncStatus("Signed out. Local tracking still works on this device."); }
     async function syncNow() {
       if (!supabaseClient || !currentUser) { updateSyncStatus(syncConfigured() ? "Sign in before syncing." : syncSetupMessage()); return; }
       updateSyncStatus("Syncing entries…");
@@ -330,7 +350,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     // ===== rendering =====
     function render() { renderNavigation(); renderHeader(); renderSummary(); renderQuickLog(); renderTimeline(); }
     function renderNavigation() { document.getElementById("navList").innerHTML = navItems.map((item, index) => `${index === 12 ? '<div class="nav-separator"></div>' : ''}<button class="${index === 0 ? "active" : ""}" data-page="${item.replace(/^[^A-Za-z?]+\s*/, "")}">${item}</button>`).join(""); }
-    function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Not set"; }
+    function renderHeader() { document.getElementById("personHeading").textContent = settings.personName; document.getElementById("landingPersonName").textContent = settings.personName; document.getElementById("dateHeading").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()); const mood = latestMood(); const wake = latestToday("wake"); document.getElementById("wakeTimeText").textContent = wake ? formatTime(wake.timestamp) : "Not set"; document.getElementById("currentMoodEmoji").textContent = mood?.details?.moodEmoji || "🙂"; document.getElementById("currentMoodText").textContent = mood?.details?.mood || "Not set"; }
     function renderSummary() {
       const colors = ["var(--gold)", "var(--blue)", "var(--lavender)", "var(--sage)", "var(--teal)", "var(--peach)", "#fff5ec", "#f8f2ff", "#f4fbef", "#fbf7ff"];
       let colorIndex = 0;
@@ -430,7 +450,7 @@ Local-first storage with optional Supabase email login/sync when configured; no 
       const quick = event.target.closest("[data-type]"); if (quick) { quick.dataset.modal === "true" ? openEntryModal(quick.dataset.type) : addInstant(quick.dataset.type); }
       const edit = event.target.closest("[data-edit]"); if (edit) openEditModal(edit.dataset.edit);
       const del = event.target.closest("[data-delete]"); if (del && confirm("Delete this entry?")) deleteEntry(del.dataset.delete);
-      const page = event.target.closest("[data-page]"); if (page) { if (page.dataset.page === "Account") { populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); document.body.classList.remove("drawer-open"); return; } document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
+      const page = event.target.closest("[data-page]"); if (page) { if (page.dataset.page === "Account") { populateClientFields(); populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); document.body.classList.remove("drawer-open"); return; } document.querySelectorAll(".nav button").forEach(btn => btn.classList.toggle("active", btn === page)); document.getElementById("todayView").style.display = page.dataset.page === "Today" ? "block" : "none"; document.getElementById("placeholderView").style.display = page.dataset.page === "Today" ? "none" : "block"; document.getElementById("placeholderTitle").textContent = page.dataset.page; document.body.classList.remove("drawer-open"); }
     });
     document.getElementById("menuButton").addEventListener("click", () => document.body.classList.add("drawer-open"));
     document.getElementById("drawerScrim").addEventListener("click", () => document.body.classList.remove("drawer-open"));
@@ -439,6 +459,8 @@ Local-first storage with optional Supabase email login/sync when configured; no 
     document.getElementById("clearTodayButton").addEventListener("click", () => { timelineMode = timelineMode === "all" ? "today" : "all"; renderTimeline(); document.getElementById("timeline").scrollIntoView({ behavior: "smooth", block: "start" }); });
     document.getElementById("clearWeekButton").addEventListener("click", clearThisWeeksData);
     document.getElementById("clearAllDataButton").addEventListener("click", clearAllAppData);
+    document.getElementById("landingAccountButton").addEventListener("click", () => { populateClientFields(); populateSyncConfigFields(); initSync(); document.getElementById("accountModal").showModal(); });
+    document.getElementById("saveClientButton").addEventListener("click", saveClientSettings);
     document.getElementById("saveSyncConfigButton").addEventListener("click", saveSyncConfig);
     document.getElementById("emailLoginButton").addEventListener("click", sendLoginLink);
     document.getElementById("syncNowButton").addEventListener("click", syncNow);
